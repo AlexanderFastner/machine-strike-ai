@@ -1,19 +1,38 @@
+import type { CSSProperties } from "react";
 import { TERRAIN, type TerrainId } from "./terrain";
+import { MACHINE_BY_ID, SPRITE } from "../data/machines";
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 
-type Props = {
-  grid: TerrainId[][];
-  /** Rendered tile size in px. Keep it a multiple of 32 — the art is 32x32 pixel art. */
-  scale?: 32 | 64 | 96;
+/** Facing is 4-directional. Sprites are drawn facing north, so this is a rotation. */
+export type Facing = "N" | "E" | "S" | "W";
+const ROTATION: Record<Facing, number> = { N: 0, E: 90, S: 180, W: 270 };
+
+export type PlacedPiece = {
+  machineId: string;
+  row: number;
+  col: number;
+  facing: Facing;
+  owner: 1 | 2;
+  /** Index into the owner's drafted set, so a placed piece can be picked back up. */
+  poolIndex?: number;
 };
 
-export function Board({ grid, scale = 64 }: Props) {
+type Props = {
+  grid: TerrainId[][];
+  scale?: 32 | 64 | 96;
+  pieces?: PlacedPiece[];
+  /** Tiles to mark as valid targets. */
+  highlight?: (row: number, col: number) => boolean;
+  onTileClick?: (row: number, col: number) => void;
+};
+
+export function Board({ grid, scale = 64, pieces = [], highlight, onTileClick }: Props) {
   const size = grid.length;
+  const at = new Map(pieces.map((p) => [`${p.row}-${p.col}`, p]));
 
   return (
-    <div className="board-wrap" style={{ "--tile": `${scale}px` } as React.CSSProperties}>
-      {/* rank labels down the left */}
+    <div className="board-wrap" style={{ "--tile": `${scale}px` } as CSSProperties}>
       <div className="ranks">
         {grid.map((_, r) => (
           <span key={r}>{size - r}</span>
@@ -24,22 +43,40 @@ export function Board({ grid, scale = 64 }: Props) {
         {grid.map((row, r) =>
           row.map((id, c) => {
             const t = TERRAIN[id];
+            const piece = at.get(`${r}-${c}`);
+            const lit = highlight?.(r, c) ?? false;
+            const coord = `${FILES[c]}${size - r}`;
+            const machine = piece && MACHINE_BY_ID[piece.machineId];
+
             return (
               <div
                 key={`${r}-${c}`}
-                className="tile"
+                className={`tile${lit ? " lit" : ""}${onTileClick ? " clickable" : ""}`}
                 role="gridcell"
-                aria-label={`${FILES[c]}${size - r}, ${t.name}`}
-                title={`${FILES[c]}${size - r} · ${t.name} (${t.modifier >= 0 ? "+" : ""}${t.modifier})`}
+                aria-label={`${coord}, ${t.name}${machine ? `, ${machine.name}` : ""}`}
+                title={
+                  machine
+                    ? `${machine.name} · ${coord} · ${t.name} (${t.modifier >= 0 ? "+" : ""}${t.modifier})`
+                    : `${coord} · ${t.name} (${t.modifier >= 0 ? "+" : ""}${t.modifier})`
+                }
+                onClick={onTileClick ? () => onTileClick(r, c) : undefined}
               >
-                <img src={t.tile} alt="" draggable={false} />
+                <img className="terrain" src={t.tile} alt="" draggable={false} />
+                {piece && machine && (
+                  <img
+                    className={`piece p${piece.owner}`}
+                    src={SPRITE[piece.machineId]}
+                    alt={machine.name}
+                    draggable={false}
+                    style={{ transform: `rotate(${ROTATION[piece.facing]}deg)` }}
+                  />
+                )}
               </div>
             );
           }),
         )}
       </div>
 
-      {/* file labels along the bottom */}
       <div className="files">
         {FILES.slice(0, size).map((f) => (
           <span key={f}>{f}</span>

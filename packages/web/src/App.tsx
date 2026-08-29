@@ -1,33 +1,47 @@
-import flat from "@data/boards/flat.json";
-import { Board, TerrainLegend } from "./board/Board";
-import { parseBoard, type BoardFile } from "./board/terrain";
+import { useState } from "react";
+import { Landing } from "./screens/Landing";
+import { BoardSelect } from "./screens/BoardSelect";
+import { Draft } from "./screens/Draft";
+import { Deploy } from "./screens/Deploy";
+import type { BoardFile } from "./board/terrain";
+import type { Team } from "./data/machines";
 
-const grid = parseBoard(flat as BoardFile);
+type Screen =
+  | { at: "landing" }
+  | { at: "board" }
+  | { at: "draft"; board: BoardFile }
+  | { at: "deploy"; board: BoardFile; team: Team };
 
 export function App() {
-  return (
-    <main className="shell">
-      <header>
-        <h1>Machine Strike</h1>
-        <p className="sub">Hot-seat player vs player · in development</p>
-      </header>
+  const [screen, setScreen] = useState<Screen>({ at: "landing" });
 
-      <section>
-        <Board grid={grid} scale={64} />
-        <p className="caption">
-          <b>{flat.name}</b> — {flat.description}
-        </p>
-      </section>
+  switch (screen.at) {
+    case "landing":
+      return <Landing onPlay={() => setScreen({ at: "board" })} />;
 
-      <section>
-        <h2>Terrain</h2>
-        <TerrainLegend />
-      </section>
+    case "board":
+      return (
+        <BoardSelect
+          onPick={(board) => setScreen({ at: "draft", board })}
+          onBack={() => setScreen({ at: "landing" })}
+        />
+      );
 
-      <footer>
-        <span className="tag">Stage 1 · Phase 1</span>
-        <span>board renders · engine not yet wired up</span>
-      </footer>
-    </main>
-  );
+    case "draft":
+      return (
+        <Draft
+          onReady={(team) => setScreen({ at: "deploy", board: screen.board, team })}
+          onBack={() => setScreen({ at: "board" })}
+        />
+      );
+
+    case "deploy":
+      return (
+        <Deploy
+          board={screen.board}
+          team={screen.team}
+          onBack={() => setScreen({ at: "draft", board: screen.board })}
+        />
+      );
+  }
 }
