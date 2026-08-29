@@ -690,6 +690,11 @@ All apply to every machine within the skill-holder's **Attack Range**.
 - **[C]** `Blind` is explicitly **turn-scoped** — it lasts "for the rest of the turn" and stacks within it.
 - **[?]** Is `Empower` turn-scoped the same way, or is its +1 permanent and cumulative? Both stack, so if
   Empower persists it grows without bound. **[H]** Turn-scoped, matching Blind.
+- **[H] Implementation note:** `Empower` and `Blind` are built as **continuous auras**, recomputed from board
+  position whenever attack power is needed, rather than stamped on at the start of a turn. They stack
+  identically, but a machine that moves into range gains the effect immediately instead of next turn. This keeps
+  them stateless — there is no modifier to reset, and none can be left behind on a destroyed piece. If the real
+  game snapshots at turn start, this is the single place to change.
 - **[?]** Do these fire on **every** player's turn, or only their owner's? **[H]** Only the owner's turn,
   matching corruption damage (§2.5).
 - **[?]** `Spray` and `Whiplash` say "all pieces" — confirm they hit the owner's own machines too. `Whiplash`
