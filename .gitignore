@@ -1,0 +1,20 @@
+node_modules/
+dist/
+build/
+.DS_Store
+*.log
+.env
+.env.local
+
+# Python (tools/, training/)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# training + experiment outputs
+training/data/
+training/checkpoints/
+experiments/**/results/
+*.onnx
+*.pt

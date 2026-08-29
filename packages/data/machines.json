@@ -1,0 +1,814 @@
+{
+  "_source": "https://horizon.fandom.com/wiki/Machine_Strike (retrieved 2026-08-28)",
+  "_notes": [
+    "'points' is BOTH the setup cost and the victory-point value awarded when the piece is destroyed.",
+    "A legal team's points must total exactly 10; at most 4 identical pieces.",
+    "'armor' and 'weak' are sides in the piece's own frame: F=front, B=back, L=left, R=right.",
+    "Sides listed in neither array are neutral.",
+    "UNVERIFIED against the game. Wiki tables carry transcription errors - re-verify before freezing perft.",
+    "Corrections applied by the project owner against the in-game cards, overriding the wiki: Scrounger health 4->5; Stormbird armor B/weak F -> armor F/weak B."
+  ],
+  "sides": {
+    "F": "front",
+    "B": "back",
+    "L": "left",
+    "R": "right"
+  },
+  "pieces": [
+    {
+      "id": "behemoth",
+      "name": "Behemoth",
+      "type": "Gunner",
+      "health": 10,
+      "attack": 3,
+      "range": 2,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "L",
+        "R"
+      ],
+      "points": 5,
+      "skill": "Shield",
+      "rarity": "Rare"
+    },
+    {
+      "id": "bellowback",
+      "name": "Bellowback",
+      "type": "Gunner",
+      "health": 7,
+      "attack": 3,
+      "range": 2,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B",
+        "L",
+        "R"
+      ],
+      "points": 3,
+      "skill": "Spray",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "bilegut",
+      "name": "Bilegut",
+      "type": "Pull",
+      "health": 9,
+      "attack": 3,
+      "range": 3,
+      "movement": 2,
+      "armor": [
+        "L",
+        "R"
+      ],
+      "weak": [
+        "F"
+      ],
+      "points": 5,
+      "skill": "Alter Terrain",
+      "rarity": "Rare"
+    },
+    {
+      "id": "bristleback",
+      "name": "Bristleback",
+      "type": "Ram",
+      "health": 4,
+      "attack": 2,
+      "range": 1,
+      "movement": 3,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 2,
+      "skill": "Spray",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "burrower",
+      "name": "Burrower",
+      "type": "Melee",
+      "health": 4,
+      "attack": 2,
+      "range": 1,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 1,
+      "skill": null,
+      "rarity": "Common"
+    },
+    {
+      "id": "tracker-burrower",
+      "name": "Tracker Burrower",
+      "type": "Melee",
+      "health": 4,
+      "attack": 2,
+      "range": 1,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 2,
+      "skill": "Alter Terrain",
+      "rarity": "Common"
+    },
+    {
+      "id": "charger",
+      "name": "Charger",
+      "type": "Dash",
+      "health": 4,
+      "attack": 2,
+      "range": 2,
+      "movement": 3,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 2,
+      "skill": "Gallop",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "clamberjaw",
+      "name": "Clamberjaw",
+      "type": "Melee",
+      "health": 8,
+      "attack": 3,
+      "range": 1,
+      "movement": 3,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 4,
+      "skill": "Stalk",
+      "rarity": "Rare"
+    },
+    {
+      "id": "clawstrider",
+      "name": "Clawstrider",
+      "type": "Melee",
+      "health": 8,
+      "attack": 3,
+      "range": 2,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 3,
+      "skill": null,
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "elemental-clawstrider",
+      "name": "Elemental Clawstrider",
+      "type": "Gunner",
+      "health": 8,
+      "attack": 3,
+      "range": 2,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 4,
+      "skill": "Burn",
+      "rarity": "Rare"
+    },
+    {
+      "id": "apex-clawstrider",
+      "name": "Apex Clawstrider",
+      "type": "Melee",
+      "health": 8,
+      "attack": 3,
+      "range": 1,
+      "movement": 2,
+      "armor": [
+        "F",
+        "L",
+        "R"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 5,
+      "skill": "Retaliate",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "dreadwing",
+      "name": "Dreadwing",
+      "type": "Swoop",
+      "health": 9,
+      "attack": 3,
+      "range": 3,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 5,
+      "skill": "Whiplash",
+      "rarity": "Rare"
+    },
+    {
+      "id": "fanghorn",
+      "name": "Fanghorn",
+      "type": "Ram",
+      "health": 5,
+      "attack": 2,
+      "range": 2,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "L",
+        "R"
+      ],
+      "points": 2,
+      "skill": "High Ground",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "fireclaw",
+      "name": "Fireclaw",
+      "type": "Melee",
+      "health": 10,
+      "attack": 4,
+      "range": 2,
+      "movement": 3,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 7,
+      "skill": "Burn",
+      "rarity": "Legendary"
+    },
+    {
+      "id": "frostclaw",
+      "name": "Frostclaw",
+      "type": "Melee",
+      "health": 10,
+      "attack": 4,
+      "range": 2,
+      "movement": 2,
+      "armor": [
+        "L",
+        "R"
+      ],
+      "weak": [
+        "F"
+      ],
+      "points": 7,
+      "skill": "Freeze",
+      "rarity": "Rare"
+    },
+    {
+      "id": "glinthawk",
+      "name": "Glinthawk",
+      "type": "Swoop",
+      "health": 5,
+      "attack": 2,
+      "range": 3,
+      "movement": 3,
+      "armor": [
+        "B"
+      ],
+      "weak": [
+        "F"
+      ],
+      "points": 2,
+      "skill": null,
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "grazer",
+      "name": "Grazer",
+      "type": "Ram",
+      "health": 4,
+      "attack": 1,
+      "range": 1,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "L",
+        "R"
+      ],
+      "points": 1,
+      "skill": "Gallop",
+      "rarity": "Common"
+    },
+    {
+      "id": "lancehorn",
+      "name": "Lancehorn",
+      "type": "Ram",
+      "health": 5,
+      "attack": 2,
+      "range": 2,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "L",
+        "R"
+      ],
+      "points": 2,
+      "skill": "Climb",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "leaplasher",
+      "name": "Leaplasher",
+      "type": "Melee",
+      "health": 3,
+      "attack": 1,
+      "range": 1,
+      "movement": 4,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 1,
+      "skill": "Empower",
+      "rarity": "Common"
+    },
+    {
+      "id": "longleg",
+      "name": "Longleg",
+      "type": "Gunner",
+      "health": 6,
+      "attack": 1,
+      "range": 2,
+      "movement": 4,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 2,
+      "skill": "Empower",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "plowhorn",
+      "name": "Plowhorn",
+      "type": "Ram",
+      "health": 5,
+      "attack": 2,
+      "range": 1,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 1,
+      "skill": "Growth",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "ravager",
+      "name": "Ravager",
+      "type": "Gunner",
+      "health": 9,
+      "attack": 2,
+      "range": 2,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 4,
+      "skill": "Sweep",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "redeye-watcher",
+      "name": "Redeye Watcher",
+      "type": "Gunner",
+      "health": 5,
+      "attack": 2,
+      "range": 2,
+      "movement": 2,
+      "armor": [
+        "L",
+        "R"
+      ],
+      "weak": [
+        "F"
+      ],
+      "points": 3,
+      "skill": "Blind",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "rockbreaker",
+      "name": "Rockbreaker",
+      "type": "Gunner",
+      "health": 9,
+      "attack": 3,
+      "range": 2,
+      "movement": 3,
+      "armor": [
+        "L",
+        "R"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 6,
+      "skill": "Alter Terrain",
+      "rarity": "Rare"
+    },
+    {
+      "id": "rollerback",
+      "name": "Rollerback",
+      "type": "Melee",
+      "health": 5,
+      "attack": 3,
+      "range": 2,
+      "movement": 3,
+      "armor": [
+        "F",
+        "L",
+        "R"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 4,
+      "skill": "Retaliate",
+      "rarity": "Rare"
+    },
+    {
+      "id": "scorcher",
+      "name": "Scorcher",
+      "type": "Dash",
+      "health": 12,
+      "attack": 4,
+      "range": 2,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 8,
+      "skill": "Burn",
+      "rarity": "Rare"
+    },
+    {
+      "id": "scrapper",
+      "name": "Scrapper",
+      "type": "Gunner",
+      "health": 5,
+      "attack": 3,
+      "range": 2,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 2,
+      "skill": null,
+      "rarity": "Common"
+    },
+    {
+      "id": "scrounger",
+      "name": "Scrounger",
+      "type": "Melee",
+      "health": 5,
+      "attack": 2,
+      "range": 1,
+      "movement": 3,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 1,
+      "skill": null,
+      "rarity": "Common"
+    },
+    {
+      "id": "shell-walker",
+      "name": "Shell-Walker",
+      "type": "Melee",
+      "health": 7,
+      "attack": 2,
+      "range": 1,
+      "movement": 2,
+      "armor": [
+        "F",
+        "R"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 3,
+      "skill": "Shield",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "shellsnapper",
+      "name": "Shellsnapper",
+      "type": "Pull",
+      "health": 10,
+      "attack": 3,
+      "range": 3,
+      "movement": 2,
+      "armor": [
+        "B",
+        "L",
+        "R"
+      ],
+      "weak": [
+        "F"
+      ],
+      "points": 6,
+      "skill": null,
+      "rarity": "Rare"
+    },
+    {
+      "id": "skydrifter",
+      "name": "Skydrifter",
+      "type": "Swoop",
+      "health": 6,
+      "attack": 2,
+      "range": 3,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 2,
+      "skill": null,
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "slaughterspine",
+      "name": "Slaughterspine",
+      "type": "Melee",
+      "health": 15,
+      "attack": 4,
+      "range": 1,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "L",
+        "R"
+      ],
+      "points": 10,
+      "skill": "Spray",
+      "rarity": "Legendary"
+    },
+    {
+      "id": "slitherfang",
+      "name": "Slitherfang",
+      "type": "Dash",
+      "health": 12,
+      "attack": 4,
+      "range": 3,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 9,
+      "skill": "Alter Terrain",
+      "rarity": "Rare"
+    },
+    {
+      "id": "snapmaw",
+      "name": "Snapmaw",
+      "type": "Pull",
+      "health": 7,
+      "attack": 3,
+      "range": 3,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 3,
+      "skill": null,
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "spikesnout",
+      "name": "Spikesnout",
+      "type": "Melee",
+      "health": 5,
+      "attack": 2,
+      "range": 1,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 1,
+      "skill": null,
+      "rarity": "Common"
+    },
+    {
+      "id": "stalker",
+      "name": "Stalker",
+      "type": "Melee",
+      "health": 5,
+      "attack": 4,
+      "range": 2,
+      "movement": 3,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 4,
+      "skill": "Stalk",
+      "rarity": "Rare"
+    },
+    {
+      "id": "stormbird",
+      "name": "Stormbird",
+      "type": "Swoop",
+      "health": 9,
+      "attack": 3,
+      "range": 3,
+      "movement": 3,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 6,
+      "skill": "Sweep",
+      "rarity": "Rare"
+    },
+    {
+      "id": "sunwing",
+      "name": "Sunwing",
+      "type": "Swoop",
+      "health": 7,
+      "attack": 3,
+      "range": 2,
+      "movement": 3,
+      "armor": [
+        "B"
+      ],
+      "weak": [
+        "F"
+      ],
+      "points": 3,
+      "skill": null,
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "thunderjaw",
+      "name": "Thunderjaw",
+      "type": "Dash",
+      "health": 10,
+      "attack": 3,
+      "range": 2,
+      "movement": 3,
+      "armor": [
+        "F",
+        "B"
+      ],
+      "weak": [
+        "L",
+        "R"
+      ],
+      "points": 6,
+      "skill": "Sweep",
+      "rarity": "Rare"
+    },
+    {
+      "id": "tideripper",
+      "name": "Tideripper",
+      "type": "Pull",
+      "health": 10,
+      "attack": 4,
+      "range": 3,
+      "movement": 2,
+      "armor": [
+        "L",
+        "R"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 6,
+      "skill": null,
+      "rarity": "Rare"
+    },
+    {
+      "id": "tremortusk",
+      "name": "Tremortusk",
+      "type": "Dash",
+      "health": 10,
+      "attack": 3,
+      "range": 2,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 5,
+      "skill": "Sweep",
+      "rarity": "Rare"
+    },
+    {
+      "id": "waterwing",
+      "name": "Waterwing",
+      "type": "Pull",
+      "health": 8,
+      "attack": 2,
+      "range": 2,
+      "movement": 3,
+      "armor": [
+        "B"
+      ],
+      "weak": [
+        "F"
+      ],
+      "points": 4,
+      "skill": "Whiplash",
+      "rarity": "Rare"
+    },
+    {
+      "id": "widemaw",
+      "name": "Widemaw",
+      "type": "Pull",
+      "health": 7,
+      "attack": 3,
+      "range": 2,
+      "movement": 2,
+      "armor": [
+        "F"
+      ],
+      "weak": [
+        "B"
+      ],
+      "points": 3,
+      "skill": null,
+      "rarity": "Uncommon"
+    }
+  ]
+}
