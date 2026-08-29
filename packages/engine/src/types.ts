@@ -21,6 +21,8 @@ export type Piece = {
   col: number;
   facing: Facing;
   hp: number;
+  /** Empower/Blind total, snapshotted at the start of each turn (rules 10.4). */
+  attackMod: number;
 };
 
 export type GameState = {

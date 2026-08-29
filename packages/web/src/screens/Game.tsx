@@ -10,6 +10,7 @@ import {
   activatablePieces,
   attackWith,
   FACINGS as ALL_FACINGS,
+  attackEnvelope,
   blightTotal,
   combatPowerOf,
   corrupted,
@@ -40,6 +41,8 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
   const [state, setState] = useState<GameState>(() => newGame(grid, deployments, corruption));
   const [selectedUid, setSelectedUid] = useState<number | null>(null);
   const [hasMoved, setHasMoved] = useState(false);
+  /** A destination the player is considering but has not committed to. */
+  const [pending, setPending] = useState<{ row: number; col: number } | null>(null);
 
   const canAct = activatablePieces(state, state.turn);
   const blight = corrupted(state);
@@ -48,10 +51,19 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
   const selectable = new Set(canAct.map((p) => p.uid));
 
   const moves = selected && !hasMoved ? movesFor(state, selected) : new Map<string, number>();
-  const target = selected ? targetOf(state, selected) : null;
 
-  // Predicted outcome of the attack currently lined up, shown on the board.
-  const preview = selected ? previewAttack(state, selected.uid) : null;
+  // While a destination is being considered, everything downstream is computed
+  // against the state that move *would* produce — so what the player sees is the
+  // real outcome, not an approximation of it.
+  const proposed = useMemo(
+    () => (selected && pending ? movePiece(state, selected.uid, pending.row, pending.col) : state),
+    [state, selected, pending],
+  );
+  const shown = selected ? (proposed.pieces.find((p) => p.uid === selected.uid) ?? null) : null;
+
+  const target = shown ? targetOf(proposed, shown) : null;
+  const preview = selected ? previewAttack(proposed, selected.uid) : null;
+  const envelope = shown ? attackEnvelope(proposed, shown) : null;
   const previewByUid = useMemo(() => {
     const map = new Map<number, { damage: number; lethal: boolean }>();
     if (!preview || !selected) return map;
@@ -61,22 +73,36 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
     return map;
   }, [preview, selected]);
 
-  // E rotates the selected machine a quarter turn clockwise.
+  // E turns a quarter clockwise; F commits a proposed move; Escape drops it.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "e" && e.key !== "E") return;
       if (!selected || state.winner) return;
-      const next = ALL_FACINGS[(ALL_FACINGS.indexOf(selected.facing) + 1) % 4];
-      setState((s) => rotatePiece(s, selected.uid, next));
+      const k = e.key.toLowerCase();
+      if (k === "e") {
+        const next = ALL_FACINGS[(ALL_FACINGS.indexOf(selected.facing) + 1) % 4];
+        setState((s) => rotatePiece(s, selected.uid, next));
+      } else if (k === "f" && pending) {
+        commitMove();
+      } else if (k === "escape") {
+        setPending(null);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selected, state.winner]);
+  }, [selected, pending, state.winner, proposed]);
+
+  function commitMove() {
+    if (!selected || !pending) return;
+    setState(proposed);
+    setPending(null);
+    setHasMoved(true);
+  }
 
   function selectPiece(uid: number) {
     if (!selectable.has(uid)) return;
     setSelectedUid(uid);
     setHasMoved(false);
+    setPending(null);
   }
 
   function clickTile(row: number, col: number) {
@@ -86,31 +112,34 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
       return;
     }
     if (!selected || hasMoved || !moves.has(key(row, col))) return;
-    setState(movePiece(state, selected.uid, row, col));
-    setHasMoved(true);
+    // Propose the move; the player confirms with F once they have seen the outcome.
+    setPending({ row, col });
   }
 
   const rotate = (f: Facing) => selected && setState(rotatePiece(state, selected.uid, f));
 
   function attack() {
     if (!selected) return;
-    // An attack ends the activation (rules 5.4).
-    setState(endActivation(attackWith(state, selected.uid), selected.uid));
+    // Attacking from a proposed tile commits the move first. An attack ends the
+    // activation either way (rules 5.4).
+    setState(endActivation(attackWith(proposed, selected.uid), selected.uid));
     setSelectedUid(null);
     setHasMoved(false);
+    setPending(null);
   }
 
   function finishActivation() {
     if (!selected) return;
-    setState(endActivation(state, selected.uid));
+    setState(endActivation(proposed, selected.uid));
     setSelectedUid(null);
     setHasMoved(false);
+    setPending(null);
   }
 
   // A null activation is illegal: a piece must change tile or attack (rules 5.3).
   // The only exception is a piece with nothing legal to do, which forfeits.
-  const stuck = !hasMoved && moves.size === 0 && (!target || target.kind === "none");
-  const canEndActivation = hasMoved || stuck;
+  const stuck = !hasMoved && !pending && moves.size === 0 && (!target || target.kind === "none");
+  const canEndActivation = hasMoved || !!pending || stuck;
 
   // A turn cannot be passed while any activation is still possible (rules 5.3).
   const mustAct = canAct.length > 0 && state.activationsLeft > 0;
@@ -142,14 +171,17 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
       </div>
 
       <div className="game-layout">
-        {selected ? <PieceCard state={state} piece={selected} /> : <div className="card-slot" />}
+        {shown ? <PieceCard state={proposed} piece={shown} /> : <div className="card-slot" />}
 
         <Board
           grid={grid}
           scale={64}
-          pieces={state.pieces}
+          pieces={pending ? state.pieces : proposed.pieces}
+          ghost={pending && selected ? { ...selected, ...pending } : undefined}
+          attackTiles={envelope?.tiles}
+          threatTiles={envelope?.threats}
           corrupted={blight}
-          powerOf={(p) => combatPowerOf(state, p as never)}
+          powerOf={(p) => combatPowerOf(proposed, p as never)}
           preview={previewByUid}
           selectedUid={selectedUid ?? undefined}
           highlight={(r, c) => moves.has(key(r, c))}
@@ -237,6 +269,21 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
                   </span>
                 )}
               </div>
+
+              {pending && (
+                <div className="confirm-box">
+                  <b>Move here?</b>
+                  <span>
+                    Press <kbd>F</kbd> to confirm, <kbd>Esc</kbd> to cancel.
+                  </span>
+                  <div className="confirm-actions">
+                    <button className="primary" onClick={commitMove}>
+                      Confirm
+                    </button>
+                    <button onClick={() => setPending(null)}>Cancel</button>
+                  </div>
+                </div>
+              )}
 
               <div className="actions column">
                 <button

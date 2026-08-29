@@ -5,12 +5,14 @@ import forest from "@assets/terrain/forest.png";
 import hill from "@assets/terrain/hills.png";
 import mountain from "@assets/terrain/mountain.png";
 import corrupt from "@assets/terrain/corrupt.png";
+import heart from "@assets/terrain/heart.png";
 import { TERRAIN_MOD, TERRAIN_IDS, type TerrainId } from "@engine";
 
 export { TERRAIN_IDS, type TerrainId };
 export { parseBoard, type BoardFile } from "@engine";
 
 export const CORRUPT_TILE = corrupt;
+export const HEART_ICON = heart;
 
 const ART: Record<TerrainId, string> = { chasm, marsh, grassland, forest, hill, mountain };
 

@@ -317,5 +317,49 @@ eq("preview warns about retaliation", retPreview.selfDamage, 1);
 
 eq("combat power reads off the board", combatPowerOf(pv, pv.pieces[0]), 3);
 
+
+// --- auras are snapshotted at the start of a turn (rules 10.4) ------------
+const { attackEnvelope, snapshotAuras } = await import("../src/index.ts");
+
+let snap = newGame(grid, [
+  { machineId: "longleg", owner: 1, row: 7, col: 3, facing: "N" },   // Empower, range 2
+  { machineId: "burrower", owner: 1, row: 7, col: 0, facing: "N" },  // far away at kickoff
+  { machineId: "burrower", owner: 2, row: 0, col: 0, facing: "S" },
+]);
+eq("no aura at range 3", snap.pieces[1].attackMod, 0);
+
+// Walk into the aura mid-turn: the snapshot does not change until next turn.
+snap = movePiece(snap, snap.pieces[1].uid, 7, 2);
+eq("still unbuffed the turn it moves in", snap.pieces.find(p => p.uid === 2).attackMod, 0);
+snap = endTurn(snap);   // P2
+snap = endTurn(snap);   // back to P1 — auras restamped
+eq("buff lands at the start of the next turn", snap.pieces.find(p => p.uid === 2).attackMod, 1);
+
+// Blind is stamped on the victim too, so it bites on the victim's own turn.
+let blind = newGame(grid, [
+  { machineId: "redeye-watcher", owner: 1, row: 4, col: 3, facing: "N" }, // Blind, range 2
+  { machineId: "burrower", owner: 2, row: 3, col: 3, facing: "S" },
+]);
+blind = endTurn(blind);  // P2's turn begins, snapshot taken
+eq("blinded on its own turn", blind.pieces.find(p => p.owner === 2).attackMod, -1);
+
+// --- attack envelope ------------------------------------------------------
+const envState = newGame(grid, [
+  { machineId: "clawstrider", owner: 1, row: 4, col: 3, facing: "N" },  // Melee, range 2
+  { machineId: "burrower", owner: 2, row: 2, col: 3, facing: "S" },
+]);
+const env = attackEnvelope(envState, envState.pieces[0]);
+eq("melee range 2 in four directions", env.tiles.size, 8);
+eq("the enemy two tiles north is a threat", env.threats.has("2,3"), true);
+eq("only one threat", env.threats.size, 1);
+
+// A Gunner can only reach its exact maximum range.
+const gunEnv = attackEnvelope(newGame(grid, [
+  { machineId: "scrapper", owner: 1, row: 4, col: 3, facing: "N" },     // Gunner range 2
+]), { uid: 1, machineId: "scrapper", owner: 1, row: 4, col: 3, facing: "N", hp: 5, attackMod: 0 });
+eq("gunner envelope is a ring of four", gunEnv.tiles.size, 4);
+eq("gunner cannot reach one tile away", gunEnv.tiles.has("3,3"), false);
+eq("gunner reaches exactly two away", gunEnv.tiles.has("2,3"), true);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

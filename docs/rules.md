@@ -688,13 +688,11 @@ All apply to every machine within the skill-holder's **Attack Range**.
 | **Blind** | Enemy machines lose **1 Attack Power** for the rest of the turn. Stacks. | Redeye Watcher |
 
 - **[C]** `Blind` is explicitly **turn-scoped** — it lasts "for the rest of the turn" and stacks within it.
-- **[?]** Is `Empower` turn-scoped the same way, or is its +1 permanent and cumulative? Both stack, so if
-  Empower persists it grows without bound. **[H]** Turn-scoped, matching Blind.
-- **[H] Implementation note:** `Empower` and `Blind` are built as **continuous auras**, recomputed from board
-  position whenever attack power is needed, rather than stamped on at the start of a turn. They stack
-  identically, but a machine that moves into range gains the effect immediately instead of next turn. This keeps
-  them stateless — there is no modifier to reset, and none can be left behind on a destroyed piece. If the real
-  game snapshots at turn start, this is the single place to change.
+- **[C]** `Empower` is turn-scoped like `Blind`: both are restamped each turn, so neither grows without bound.
+- **[C]** `Empower` and `Blind` are **snapshotted at the start of each turn**, as the real game does — not
+  recomputed continuously. A machine that moves into an aura is unaffected until the next turn begins. The
+  snapshot covers **every** piece on the board, not just the active player's, so an opposing `Blind` is already
+  in force when its victim's turn starts — which is what makes the skill worth anything.
 - **[?]** Do these fire on **every** player's turn, or only their owner's? **[H]** Only the owner's turn,
   matching corruption damage (§2.5).
 - **[?]** `Spray` and `Whiplash` say "all pieces" — confirm they hit the owner's own machines too. `Whiplash`

@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { TERRAIN, CORRUPT_TILE, type TerrainId } from "./terrain";
+import { TERRAIN, CORRUPT_TILE, HEART_ICON, type TerrainId } from "./terrain";
 import { MACHINE_BY_ID, SPRITE } from "../data/machines";
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
@@ -34,6 +34,12 @@ type Props = {
   powerOf?: (piece: PlacedPiece) => number;
   /** Predicted damage per piece uid, for the attack preview. */
   preview?: Map<number, { damage: number; lethal: boolean }>;
+  /** Tiles the selected piece could attack from where it stands. */
+  attackTiles?: Set<string>;
+  /** Attackable tiles that currently hold an enemy. */
+  threatTiles?: Set<string>;
+  /** Semi-transparent piece shown at a proposed destination. */
+  ghost?: PlacedPiece;
 };
 
 export function Board({
@@ -46,6 +52,9 @@ export function Board({
   corrupted,
   powerOf,
   preview,
+  attackTiles,
+  threatTiles,
+  ghost,
 }: Props) {
   const size = grid.length;
   const at = new Map(pieces.map((p) => [`${p.row}-${p.col}`, p]));
@@ -65,13 +74,21 @@ export function Board({
             const piece = at.get(`${r}-${c}`);
             const lit = highlight?.(r, c) ?? false;
             const blighted = corrupted?.has(`${r},${c}`) ?? false;
+            const inRange = attackTiles?.has(`${r},${c}`) ?? false;
+            const threatened = threatTiles?.has(`${r},${c}`) ?? false;
+            const isGhost = ghost && ghost.row === r && ghost.col === c;
             const coord = `${FILES[c]}${size - r}`;
             const machine = piece && MACHINE_BY_ID[piece.machineId];
 
             return (
               <div
                 key={`${r}-${c}`}
-                className={`tile${lit ? " lit" : ""}${onTileClick ? " clickable" : ""}`}
+                className={
+                  "tile" +
+                  (lit ? " lit" : "") +
+                  (onTileClick ? " clickable" : "") +
+                  (threatened ? " threat" : inRange ? " in-range" : "")
+                }
                 role="gridcell"
                 aria-label={`${coord}, ${t.name}${machine ? `, ${machine.name}` : ""}`}
                 title={
@@ -92,12 +109,24 @@ export function Board({
                   />
                 )}
                 {piece && machine && piece.hp !== undefined && (
-                  <span className={`hp p${piece.owner}`}>{piece.hp}</span>
+                  <span className="hp" title={`${piece.hp} health`}>
+                    <img src={HEART_ICON} alt="" draggable={false} />
+                    <b>{piece.hp}</b>
+                  </span>
                 )}
                 {piece && machine && powerOf && (
                   <span className="power" title="Combat Power from this tile">
                     {powerOf(piece)}
                   </span>
+                )}
+                {isGhost && (
+                  <img
+                    className={`piece ghost p${ghost!.owner}`}
+                    src={SPRITE[ghost!.machineId]}
+                    alt=""
+                    draggable={false}
+                    style={{ transform: `rotate(${ROTATION[ghost!.facing]}deg)` }}
+                  />
                 )}
                 {piece && preview?.has(piece.uid!) && (
                   <span className={`dmg${preview.get(piece.uid!)!.lethal ? " lethal" : ""}`}>

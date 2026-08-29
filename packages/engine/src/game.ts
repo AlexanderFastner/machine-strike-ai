@@ -2,9 +2,9 @@ import { attackerCP, resolveAttack } from "./combat";
 import { blightDone, corruptedTiles, nextTileFor } from "./corruption";
 import {
   CONVERSION,
-  attackPowerMod,
   dist,
   facingToward,
+  snapshotAuras,
   stepTerrain,
 } from "./skills";
 import { MACHINE_BY_ID } from "./machines";
@@ -34,7 +34,7 @@ export function newGame(
   deployments: Deployment[],
   corruptionEnabled = true,
 ): GameState {
-  return {
+  const state: GameState = {
     grid,
     pieces: deployments.map((d, i) => ({
       uid: i + 1,
@@ -44,6 +44,7 @@ export function newGame(
       col: d.col,
       facing: d.facing,
       hp: MACHINE_BY_ID[d.machineId].health,
+      attackMod: 0,
     })),
     turn: 1,
     round: 1,
@@ -55,6 +56,8 @@ export function newGame(
     turnNumber: 1,
     corruption: { enabled: corruptionEnabled, fronts: { 1: 0, 2: 0 } },
   };
+  snapshotAuras(state);
+  return state;
 }
 
 /** A corrupted tile counts only as corrupted: the terrain beneath stops mattering. */
@@ -193,7 +196,7 @@ export function attackWith(s0: GameState, uid: number): GameState {
       target.dir,
       blightedAt(attacker),
       blightedAt(victim),
-      attackPowerMod(s, attacker),
+      attacker.attackMod,
     );
 
     if (res.kind === "damage") {
@@ -288,6 +291,7 @@ function startOfTurn(s: GameState) {
   startOfTurnSkills(s);
   if (!s.corruption.enabled) {
     if (s.round > ROUND_LIMIT) endOnTime(s);
+    snapshotAuras(s);
     return;
   }
 
@@ -310,6 +314,9 @@ function startOfTurn(s: GameState) {
   }
 
   if (blightDone(s.grid.length, s.corruption) && !s.winner) endOnTime(s);
+
+  // Auras are stamped on last, once deaths from the blight and Spray have settled.
+  snapshotAuras(s);
 }
 
 /**
@@ -363,7 +370,7 @@ export function previewAttack(s: GameState, uid: number): AttackPreview | null {
 
   const blighted = corrupted(s);
   const isBlighted = (p: Piece) => blighted.has(`${p.row},${p.col}`);
-  const powerMod = attackPowerMod(s, attacker);
+  const powerMod = attacker.attackMod;
   const victims = target.kind === "single" ? [target.victim] : target.victims;
 
   let selfDamage = 0;
@@ -405,7 +412,7 @@ export function combatPowerOf(s: GameState, piece: Piece): number {
     m,
     s.grid[piece.row][piece.col],
     corrupted(s).has(`${piece.row},${piece.col}`),
-    attackPowerMod(s, piece),
+    piece.attackMod,
   );
 }
 

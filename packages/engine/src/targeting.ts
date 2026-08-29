@@ -72,3 +72,40 @@ export function targetOf(state: GameState, piece: Piece): Target {
   }
   return { kind: "none", reason: "Nothing in range" };
 }
+
+/**
+ * Every tile this piece could attack under *some* facing, plus the subset that
+ * currently holds an enemy. Used to paint the attack range on the board: the
+ * envelope answers "if I turned to face that way, could I reach it?".
+ */
+export function attackEnvelope(
+  state: GameState,
+  piece: Piece,
+): { tiles: Set<string>; threats: Set<string> } {
+  const m = MACHINE_BY_ID[piece.machineId];
+  const tiles = new Set<string>();
+  const add = (r: number, c: number) => inBounds(state, r, c) && tiles.add(`${r},${c}`);
+
+  for (const facing of ["N", "E", "S", "W"] as Facing[]) {
+    if (hasSweep(m)) {
+      for (const [r, c] of sweepTiles({ ...piece, facing }, m)) add(r, c);
+      continue;
+    }
+    const [dr, dc] = DELTA[facing];
+    if (m.type === "Gunner") {
+      // Gunners fire at exactly maximum range — nothing nearer is reachable.
+      add(piece.row + dr * m.range, piece.col + dc * m.range);
+    } else {
+      for (let i = 1; i <= m.range; i++) add(piece.row + dr * i, piece.col + dc * i);
+    }
+  }
+
+  const threats = new Set(
+    [...tiles].filter((k) => {
+      const [r, c] = k.split(",").map(Number);
+      const occ = at(state, r, c);
+      return !!occ && occ.owner !== piece.owner;
+    }),
+  );
+  return { tiles, threats };
+}

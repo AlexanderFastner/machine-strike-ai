@@ -40,9 +40,12 @@ export function stepTerrain(t: TerrainId, delta: 1 | -1): TerrainId {
 export const dist = (a: Piece, b: Piece) => Math.abs(a.row - b.row) + Math.abs(a.col - b.col);
 
 /**
- * 4a. Empower and Blind, as continuous auras rather than start-of-turn stamps.
- * Both stack. Computing them on demand keeps them stateless — there is no
- * modifier to reset, and no way for one to be left behind on a dead piece.
+ * 4a. Empower and Blind. Both stack, and both are **snapshotted at the start of
+ * each turn** (rules 10.4) rather than recomputed continuously: a machine that
+ * moves into an aura mid-turn is not affected until the next turn begins.
+ *
+ * The snapshot covers every piece on the board, not just the active player's,
+ * so an opposing Blind is already in effect when its victim's turn starts.
  */
 export function attackPowerMod(state: GameState, piece: Piece): number {
   let mod = 0;
@@ -114,3 +117,9 @@ export const SKILL_TEXT: Record<string, string> = {
   Retaliate: "When attacked: turns to face the attacker and deals 1 damage back.",
   Sweep: "Hits the target and everything alongside it, friend or foe.",
 };
+
+/** Recompute every piece's Empower/Blind total. Call at the start of each turn. */
+export function snapshotAuras(state: GameState) {
+  const next = state.pieces.map((p) => attackPowerMod(state, p));
+  state.pieces.forEach((p, i) => (p.attackMod = next[i]));
+}
