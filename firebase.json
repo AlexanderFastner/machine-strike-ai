@@ -5,12 +5,18 @@
     "rewrites": [{ "source": "**", "destination": "/index.html" }],
     "headers": [
       {
-        "source": "**/*.@(js|css|png|svg|woff2)",
+        "comment": "Hashed build assets never change under a given name.",
+        "source": "**/*.@(js|css|png|jpg|jpeg|gif|svg|webp|woff|woff2|onnx)",
         "headers": [{ "key": "Cache-Control", "value": "max-age=31536000, immutable" }]
       },
       {
-        "source": "/index.html",
-        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        "comment": "The shell must never be cached, or a deploy is invisible behind a stale index.",
+        "source": "/",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache, max-age=0" }]
+      },
+      {
+        "source": "**/*.html",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache, max-age=0" }]
       }
     ]
   }
