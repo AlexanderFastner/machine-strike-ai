@@ -14,6 +14,7 @@ import { flyingOnly, type TerrainId } from "./terrain";
 import {
   ACTIVATIONS_PER_TURN,
   CORRUPTION_DAMAGE,
+  OVERCHARGE_COST,
   DELTA,
   ROUND_LIMIT,
   VP_TO_WIN,
@@ -258,6 +259,29 @@ export function attackWith(s0: GameState, uid: number): GameState {
   if (!s.winner && s.pieces.every((p) => p.owner !== other(attacker.owner)))
     s.winner = attacker.owner;
   return s;
+}
+
+/**
+ * Overcharge (rules 5.5): 2 Health buys one extra tile of movement or an extra
+ * attack. It needs 2 Health to declare, and **the cost is paid after the action
+ * resolves** — so a machine can spend its last health landing a killing blow,
+ * score the points, and only then be destroyed.
+ */
+export const canOvercharge = (p: Piece) => p.hp >= OVERCHARGE_COST;
+
+export function payOverchargeCost(s0: GameState, uid: number): GameState {
+  const s = clone(s0);
+  const p = s.pieces.find((x) => x.uid === uid);
+  if (!p) return s; // already destroyed by the exchange it just paid for
+  p.hp -= OVERCHARGE_COST;
+  s.log.push(`${name(p)} overcharges (-${OVERCHARGE_COST}).`);
+  if (p.hp <= 0) kill(s, p, other(p.owner));
+  return s;
+}
+
+/** Attack, then pay. Ordering matters: the kill is scored before the cost lands. */
+export function overchargeAttack(s0: GameState, uid: number): GameState {
+  return payOverchargeCost(attackWith(s0, uid), uid);
 }
 
 /** Spend one activation. An attack always ends the activation (rules 5.4). */

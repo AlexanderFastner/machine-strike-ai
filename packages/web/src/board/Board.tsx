@@ -34,6 +34,8 @@ type Props = {
   powerOf?: (piece: PlacedPiece) => number;
   /** Predicted damage per piece uid, for the attack preview. */
   preview?: Map<number, { damage: number; lethal: boolean }>;
+  /** Reachable only by sprinting — outlined differently, since it costs the attack. */
+  sprintTiles?: Set<string>;
   /** Tiles the selected piece could attack from where it stands. */
   attackTiles?: Set<string>;
   /** Attackable tiles that currently hold an enemy. */
@@ -52,6 +54,7 @@ export function Board({
   corrupted,
   powerOf,
   preview,
+  sprintTiles,
   attackTiles,
   threatTiles,
   ghost,
@@ -77,6 +80,7 @@ export function Board({
             const inRange = attackTiles?.has(`${r},${c}`) ?? false;
             const threatened = threatTiles?.has(`${r},${c}`) ?? false;
             const isGhost = ghost && ghost.row === r && ghost.col === c;
+            const sprintOnly = sprintTiles?.has(`${r},${c}`) ?? false;
             const coord = `${FILES[c]}${size - r}`;
             const machine = piece && MACHINE_BY_ID[piece.machineId];
 
@@ -86,6 +90,7 @@ export function Board({
                 className={
                   "tile" +
                   (lit ? " lit" : "") +
+                  (sprintOnly ? " sprint" : "") +
                   (onTileClick ? " clickable" : "") +
                   (threatened ? " threat" : inRange ? " in-range" : "")
                 }

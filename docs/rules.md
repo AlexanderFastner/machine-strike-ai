@@ -359,6 +359,8 @@ move generator that cannot express the game, and it is expensive to unpick once 
 - **[C]** A piece may **sprint** — move beyond its normal Movement — but then **cannot attack**, unless it
   overcharges (§5.4).
 - **[C]** **Sprint extends movement by exactly 1 tile.** Sprint range = **Movement + 1**.
+- **[C]** Implemented: sprint-only tiles are shown with a distinct outline, and moving to one **forfeits the
+  attack for that activation** unless the machine overcharges.
 
 ---
 
@@ -425,11 +427,12 @@ around silently makes corruption far more lethal.
 
 - **[?]** Does overcharging consume the turn's **second activation**, or is it independent? Significant tempo
   question: if independent, a player effectively acts three times in a turn.
+- **[H] As implemented:** overcharge is declared during an activation, costs 2 Health paid **after** the action
+  resolves, is limited to **once per activation**, and does **not** consume the turn's second activation. Its
+  effect is to lift the sprint attack-forfeit — buying back the attack after moving the extra tile. There is no
+  lasting exhaustion state: the 2 Health is the entire cost.
 - **[?]** May a piece overcharge **more than once** in a single activation — paying 4 Health for two extra
-  tiles?
-- **[?]** Earlier notes described overcharge as "exhausting" the piece. Given the above, is there any lasting
-  exhaustion state at all, or is the 2 Health the entire cost? **[H]** The 2 Health is the entire cost; no
-  lasting exhaustion.
+  tiles? Currently no.
 - **[?]** When a machine dies from its own overcharge cost, does the **opponent** receive its Victory Points?
   (By analogy with corruption deaths in §2.5, presumably yes.)
 

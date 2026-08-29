@@ -507,9 +507,9 @@ arena puzzle --suite tactics.msn --agent minimax:depth=6
 | Phase | Deliverable | Done when |
 |---|---|---|
 | **0. Rules** | ✅ **Done.** `docs/rules.md`, `docs/pieces.md`, roster data, placeholder art | No blocking questions remain |
-| **1. Engine** | `packages/engine` + tests | 🔄 In progress. Combat, movement, targeting, activations, knockback, corruption and all 15 skills done, with 101 golden tests. Remaining: sprint, overcharge, perft, fuzz, and the typed-array conversion |
-| **2. Hot-seat** | `packages/web` — draft, deploy, play, win | 🔄 Full flow playable: landing, board select with the corruption toggle, hidden two-player draft, alternating deployment, and a turn loop with combat, skills, the blight, a selected-machine card and a damage preview. Remaining: sprint, overcharge |
-| **3. Polish** | Undo, save/load via MSN, damage + threat overlays | You'd hand it to a friend without explaining anything |
+| **1. Engine** | `packages/engine` + tests | 🔄 Rules-complete for the hot-seat game: combat, movement, targeting, activations, knockback, corruption, all 15 skills, sprint and overcharge — 123 golden tests. Remaining: perft, fuzz, and the typed-array conversion before Stage 2 |
+| **2. Hot-seat** | `packages/web` — draft, deploy, play, win | ✅ **Playable end to end.** Landing → board select (corruption toggle) → hidden two-player draft → alternating deployment → turn loop with combat, skills, blight, sprint and overcharge. Machine card, attack-range overlay, damage preview, proposed moves with keyboard confirm |
+| **3. Polish** | Undo, save/load via MSN, board library | 🔄 Threat and damage overlays done. Remaining: undo, save/load, more boards |
 
 **Deferred to after the hot-seat milestone** — real features, deliberately not on the critical path:
 

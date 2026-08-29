@@ -361,5 +361,55 @@ eq("gunner envelope is a ring of four", gunEnv.tiles.size, 4);
 eq("gunner cannot reach one tile away", gunEnv.tiles.has("3,3"), false);
 eq("gunner reaches exactly two away", gunEnv.tiles.has("2,3"), true);
 
+
+// --- sprint and overcharge (rules 4.5, 5.5) -------------------------------
+const { canOvercharge, payOverchargeCost, overchargeAttack, SPRINT_BONUS } =
+  await import("../src/index.ts");
+
+// Sprint reaches exactly one tile further than a normal move.
+const runner = newGame(grid, [
+  { machineId: "clawstrider", owner: 1, row: 7, col: 0, facing: "N" }, // movement 2
+]);
+const normal = movesFor(runner, runner.pieces[0]);
+const sprint = movesFor(runner, runner.pieces[0], true);
+eq("sprint reaches further", sprint.size > normal.size, true);
+eq("sprint is exactly +1 tile of reach", Math.max(...sprint.values()), Math.max(...normal.values()) + SPRINT_BONUS);
+eq("every normal tile is still reachable", [...normal.keys()].every(k => sprint.has(k)), true);
+
+// Overcharge needs 2 health to declare.
+eq("healthy machine may overcharge", canOvercharge({ hp: 2 }), true);
+eq("a 1-health machine may not", canOvercharge({ hp: 1 }), false);
+
+// The cost is paid after the action: a 2-health machine still lands its kill.
+let sac = newGame(grid, [
+  { machineId: "stalker", owner: 1, row: 4, col: 3, facing: "N" },   // atk 4, range 2
+  { machineId: "burrower", owner: 2, row: 3, col: 3, facing: "N" },  // 4hp, weak back
+]);
+sac.pieces[0].hp = 2;
+const sacked = overchargeAttack(sac, sac.pieces[0].uid);
+eq("the victim still dies", sacked.pieces.some(p => p.owner === 2), false);
+eq("and the attacker scores it", sacked.vp[1], MACHINE_BY_ID["burrower"].points);
+eq("before the cost destroys it", sacked.pieces.some(p => p.owner === 1), false);
+eq("the opponent scores the overcharged machine", sacked.vp[2], MACHINE_BY_ID["stalker"].points);
+
+// A healthy machine just loses 2.
+let fine = newGame(grid, [
+  { machineId: "clawstrider", owner: 1, row: 4, col: 3, facing: "N" },
+  { machineId: "burrower", owner: 2, row: 0, col: 0, facing: "S" },
+]);
+fine = payOverchargeCost(fine, fine.pieces[0].uid);
+eq("overcharge costs 2 health", fine.pieces.find(p => p.owner === 1).hp, 8 - 2);
+
+// --- terrain changes are visible in state.grid ----------------------------
+// Regression: the board must render state.grid, not the grid parsed at setup.
+let slither = newGame(grid, [
+  { machineId: "slitherfang", owner: 1, row: 4, col: 3, facing: "N" }, // Dash, Alter Terrain
+  { machineId: "burrower", owner: 2, row: 3, col: 3, facing: "N" },
+]);
+const beforeGrid = slither.grid[4][3];
+slither = attackWith(slither, slither.pieces[0].uid);
+eq("Alter Terrain really changes state.grid", slither.grid[4][3] !== beforeGrid, true);
+eq("the attacker's tile sinks to marsh", slither.grid[4][3], "marsh");
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

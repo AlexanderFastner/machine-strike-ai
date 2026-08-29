@@ -47,6 +47,9 @@ export const ACTIVATIONS_PER_TURN = 2;
 /** Used only when corruption is switched off — the blight is otherwise the clock. */
 export const ROUND_LIMIT = 50;
 export const CORRUPTION_DAMAGE = 2;
+/** Health paid to overcharge, and the extra reach sprinting buys. */
+export const OVERCHARGE_COST = 2;
+export const SPRINT_BONUS = 1;
 
 export const other = (o: Owner): Owner => (o === 1 ? 2 : 1);
 export const at = (s: GameState, row: number, col: number) =>

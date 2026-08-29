@@ -9,6 +9,9 @@ import {
   ROUND_LIMIT,
   activatablePieces,
   attackWith,
+  canOvercharge,
+  overchargeAttack,
+  payOverchargeCost,
   FACINGS as ALL_FACINGS,
   attackEnvelope,
   blightTotal,
@@ -37,20 +40,30 @@ type Props = {
 };
 
 export function Game({ board, corruption, deployments, onQuit }: Props) {
-  const grid = useMemo(() => parseBoard(board), [board]);
-  const [state, setState] = useState<GameState>(() => newGame(grid, deployments, corruption));
+  // Only the *starting* grid; terrain is mutable, so everything else reads state.grid.
+  const startGrid = useMemo(() => parseBoard(board), [board]);
+  const [state, setState] = useState<GameState>(() => newGame(startGrid, deployments, corruption));
   const [selectedUid, setSelectedUid] = useState<number | null>(null);
   const [hasMoved, setHasMoved] = useState(false);
   /** A destination the player is considering but has not committed to. */
   const [pending, setPending] = useState<{ row: number; col: number } | null>(null);
+  /** Sprinting reaches one tile further but forfeits the attack (rules 4.5). */
+  const [sprinted, setSprinted] = useState(false);
+  /** Overcharge spent this activation: 2 health, paid after the action. */
+  const [overcharged, setOvercharged] = useState(false);
 
   const canAct = activatablePieces(state, state.turn);
   const blight = corrupted(state);
-  const blightPct = Math.round((blight.size / blightTotal(grid.length)) * 100);
+  const blightPct = Math.round((blight.size / blightTotal(state.grid.length)) * 100);
   const selected = state.pieces.find((p) => p.uid === selectedUid) ?? null;
   const selectable = new Set(canAct.map((p) => p.uid));
 
-  const moves = selected && !hasMoved ? movesFor(state, selected) : new Map<string, number>();
+  const moves = selected && !hasMoved ? movesFor(state, selected, true) : new Map<string, number>();
+  const walkMoves = selected && !hasMoved ? movesFor(state, selected) : new Map<string, number>();
+  const sprintOnly = useMemo(
+    () => new Set([...moves.keys()].filter((k) => !walkMoves.has(k))),
+    [moves, walkMoves],
+  );
 
   // While a destination is being considered, everything downstream is computed
   // against the state that move *would* produce — so what the player sees is the
@@ -83,19 +96,27 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
         setState((s) => rotatePiece(s, selected.uid, next));
       } else if (k === "f" && pending) {
         commitMove();
+      } else if (k === "enter" && canEndActivation) {
+        finishActivation();
       } else if (k === "escape") {
         setPending(null);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selected, pending, state.winner, proposed]);
+  }, [selected, pending, state.winner, proposed, overcharged, hasMoved]);
 
   function commitMove() {
     if (!selected || !pending) return;
     setState(proposed);
+    if (pendingIsSprint) setSprinted(true);
     setPending(null);
     setHasMoved(true);
+  }
+
+  function overcharge() {
+    if (!selected || !canOvercharge(selected)) return;
+    setOvercharged(true);
   }
 
   function selectPiece(uid: number) {
@@ -103,7 +124,17 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
     setSelectedUid(uid);
     setHasMoved(false);
     setPending(null);
+    setSprinted(false);
+    setOvercharged(false);
   }
+
+  const clearActivation = () => {
+    setSelectedUid(null);
+    setHasMoved(false);
+    setPending(null);
+    setSprinted(false);
+    setOvercharged(false);
+  };
 
   function clickTile(row: number, col: number) {
     const occupant = state.pieces.find((p) => p.row === row && p.col === col);
@@ -116,24 +147,29 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
     setPending({ row, col });
   }
 
+  const pendingIsSprint = !!pending && sprintOnly.has(key(pending.row, pending.col));
+  /** Sprinting forfeits the attack unless it is paid for with an overcharge. */
+  const attackForfeit = (sprinted || pendingIsSprint) && !overcharged;
+
   const rotate = (f: Facing) => selected && setState(rotatePiece(state, selected.uid, f));
 
   function attack() {
-    if (!selected) return;
+    if (!selected || attackForfeit) return;
     // Attacking from a proposed tile commits the move first. An attack ends the
-    // activation either way (rules 5.4).
-    setState(endActivation(attackWith(proposed, selected.uid), selected.uid));
-    setSelectedUid(null);
-    setHasMoved(false);
-    setPending(null);
+    // activation either way (rules 5.4). An overcharged attack pays its 2 health
+    // afterwards, so a killing blow still scores.
+    const resolved = overcharged
+      ? overchargeAttack(proposed, selected.uid)
+      : attackWith(proposed, selected.uid);
+    setState(endActivation(resolved, selected.uid));
+    clearActivation();
   }
 
   function finishActivation() {
     if (!selected) return;
-    setState(endActivation(proposed, selected.uid));
-    setSelectedUid(null);
-    setHasMoved(false);
-    setPending(null);
+    const settled = overcharged ? payOverchargeCost(proposed, selected.uid) : proposed;
+    setState(endActivation(settled, selected.uid));
+    clearActivation();
   }
 
   // A null activation is illegal: a piece must change tile or attack (rules 5.3).
@@ -159,7 +195,7 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
             {state.activationsLeft} activation{state.activationsLeft === 1 ? "" : "s"} left
           </span>
           {state.corruption.enabled ? (
-            <div className="blight-bar" title={`${blight.size} of ${blightTotal(grid.length)} tiles corrupted`}>
+            <div className="blight-bar" title={`${blight.size} of ${blightTotal(state.grid.length)} tiles corrupted`}>
               <div className="blight-fill" style={{ width: `${blightPct}%` }} />
               <span>Blight {blightPct}%</span>
             </div>
@@ -174,8 +210,9 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
         {shown ? <PieceCard state={proposed} piece={shown} /> : <div className="card-slot" />}
 
         <Board
-          grid={grid}
+          grid={proposed.grid}
           scale={64}
+          sprintTiles={sprintOnly}
           pieces={pending ? state.pieces : proposed.pieces}
           ghost={pending && selected ? { ...selected, ...pending } : undefined}
           attackTiles={envelope?.tiles}
@@ -270,6 +307,17 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
                 )}
               </div>
 
+              {(sprinted || pendingIsSprint) && (
+                <div className={`sprint-note${attackForfeit ? "" : " paid"}`}>
+                  <b>Sprinting</b>
+                  <span>
+                    {attackForfeit
+                      ? "One tile further, but no attack this activation — unless you overcharge."
+                      : "Overcharged, so the attack is still available."}
+                  </span>
+                </div>
+              )}
+
               {pending && (
                 <div className="confirm-box">
                   <b>Move here?</b>
@@ -288,10 +336,25 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
               <div className="actions column">
                 <button
                   className="primary"
-                  disabled={!target || target.kind === "none"}
+                  disabled={!target || target.kind === "none" || attackForfeit}
+                  title={attackForfeit ? "Sprinting forfeits the attack — overcharge to keep it" : undefined}
                   onClick={attack}
                 >
                   Attack
+                </button>
+                <button
+                  className={overcharged ? "overcharged" : ""}
+                  disabled={overcharged || !canOvercharge(selected)}
+                  title={
+                    overcharged
+                      ? "Already overcharged this activation"
+                      : canOvercharge(selected)
+                        ? "Spend 2 health — paid after the action resolves"
+                        : "Needs at least 2 health"
+                  }
+                  onClick={overcharge}
+                >
+                  {overcharged ? "Overcharged −2 ♥" : "Overcharge −2 ♥"}
                 </button>
                 <button
                   onClick={finishActivation}
@@ -306,8 +369,8 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
                 </button>
               </div>
               <p className="rule-note">
-                Press <kbd>E</kbd> to turn a quarter clockwise. Rotation is free until you attack;
-                moving then attacking ends the activation.
+                <kbd>E</kbd> turn · <kbd>F</kbd> confirm a move · <kbd>Enter</kbd> end activation ·{" "}
+                <kbd>Esc</kbd> cancel. Blue-outlined tiles are sprint range.
               </p>
             </>
           )}
