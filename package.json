@@ -1,0 +1,12 @@
+{
+  "name": "machine-strike",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "dev": "npm run dev -w @ms/web",
+    "build": "npm run build -w @ms/web",
+    "preview": "npm run preview -w @ms/web",
+    "deploy": "npm run build && firebase deploy --only hosting"
+  }
+}

@@ -205,11 +205,14 @@ machine-strike/
 │   └── arena/                  # headless runner, Elo, tournaments             (Stage 2)
 ├── assets/{terrain,pieces}/
 ├── tools/                      # data + asset generators
+├── firebase.json               # hosting config -> packages/web/dist
 ├── training/                   # Python: PyTorch, ONNX export                  (Stage 2)
 └── experiments/                # run configs + results                         (Stage 2)
 ```
 
-pnpm workspace, TypeScript on the JS side. Create `ai/`, `arena/`, `training/` only when Stage 2 begins.
+**npm workspaces**, TypeScript on the JS side. (Plan originally said pnpm; npm workspaces does the same job here
+and is already installed, so it saves a dependency.) Create `ai/`, `arena/`, `training/` only when Stage 2
+begins.
 
 ### 2.1 `packages/engine` — the critical piece
 
@@ -327,7 +330,8 @@ The likeliest failure mode is a subtly wrong engine that quietly corrupts everyt
 
 Deliverable: two people play a complete, correct game of Machine Strike in a browser tab.
 
-- **Stack:** Vite + React + TypeScript, Zustand for UI state. Board as CSS grid + inline SVG — not Canvas until
+- **Stack:** Vite 7 + React 19 + TypeScript, deployed to **Firebase Hosting**. Zustand for UI state when the
+  board needs it — not yet. Board as CSS grid + inline SVG — not Canvas until
   profiling says otherwise; DOM gives free accessibility and easy hit-testing on 64 tiles.
 - **Flow:** draft (exactly 10 points, max 4 identical) → deployment (back two rows) → alternating turns of two
   activations → victory at 7 VP, elimination, or the blight consuming the board.
@@ -371,6 +375,27 @@ the base tile, since the underlying terrain still governs Combat Power.
 - Player colors aren't baked in; tint the body at render time.
 
 Original art only — non-commercial fan reimplementation, no Guerrilla assets, credit them in the README.
+
+### 4.2 Hosting and the build loop
+
+**Firebase Hosting** is a good fit and needs no compromises: the whole game runs client-side, so there is nothing
+to serve but static files. That stays true through Stage 2 — the trained net ships as an ONNX file loaded by the
+browser, not as an inference API. Firebase only becomes more than a static host if online multiplayer or saved
+accounts are wanted later, at which point Firestore is there.
+
+```bash
+npm run dev       # local dev server on :5173
+npm run build     # typecheck + production build to packages/web/dist
+npm run deploy    # build, then firebase deploy --only hosting
+```
+
+`firebase.json` points hosting at `packages/web/dist`, rewrites all routes to `index.html` for the SPA, and sets
+immutable caching on hashed assets with `no-cache` on `index.html` — so a deploy is visible immediately rather
+than being held by a stale cached shell.
+
+**The working loop for Stage 1**: build a feature → verify locally → deploy → look at it on the real URL. Worth
+doing every step rather than in one lump at the end, since pixel-art scaling and board layout are exactly the
+things that look fine in dev and wrong on a different screen.
 
 ---
 

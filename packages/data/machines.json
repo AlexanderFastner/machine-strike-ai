@@ -6,7 +6,9 @@
     "'armor' and 'weak' are sides in the piece's own frame: F=front, B=back, L=left, R=right.",
     "Sides listed in neither array are neutral.",
     "UNVERIFIED against the game. Wiki tables carry transcription errors - re-verify before freezing perft.",
-    "Corrections applied by the project owner against the in-game cards, overriding the wiki: Scrounger health 4->5; Stormbird armor B/weak F -> armor F/weak B."
+    "Corrections applied by the project owner against the in-game cards, overriding the wiki: Scrounger health 4->5; Stormbird armor B/weak F -> armor F/weak B.",
+    "'attackArea' (Sweep pieces only) is a list of [right, forward] offsets in the piece's OWN frame, rotated by its facing at resolution time. +forward = tiles ahead, +right = tiles to the piece's right.",
+    "Roster verified against the in-game cards: the armor-back/weak-front layout on Glinthawk, Sunwing and Waterwing is correct as listed; only Stormbird was inverted."
   ],
   "sides": {
     "F": "front",
@@ -419,7 +421,21 @@
       ],
       "points": 4,
       "skill": "Sweep",
-      "rarity": "Uncommon"
+      "rarity": "Uncommon",
+      "attackArea": [
+        [
+          -1,
+          2
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ]
     },
     {
       "id": "redeye-watcher",
@@ -697,7 +713,45 @@
       ],
       "points": 6,
       "skill": "Sweep",
-      "rarity": "Rare"
+      "rarity": "Rare",
+      "attackArea": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          -1,
+          2
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          -1,
+          3
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          3
+        ]
+      ]
     },
     {
       "id": "sunwing",
@@ -735,7 +789,21 @@
       ],
       "points": 6,
       "skill": "Sweep",
-      "rarity": "Rare"
+      "rarity": "Rare",
+      "attackArea": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ]
+      ]
     },
     {
       "id": "tideripper",
@@ -772,7 +840,21 @@
       ],
       "points": 5,
       "skill": "Sweep",
-      "rarity": "Rare"
+      "rarity": "Rare",
+      "attackArea": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ]
+      ]
     },
     {
       "id": "waterwing",

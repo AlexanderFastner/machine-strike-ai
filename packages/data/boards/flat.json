@@ -1,0 +1,23 @@
+{
+  "id": "flat",
+  "name": "Flat",
+  "description": "All grassland. The baseline test board: no terrain effects, so combat maths is unmodified.",
+  "legend": {
+    "C": "chasm",
+    "W": "marsh",
+    "G": "grassland",
+    "F": "forest",
+    "H": "hill",
+    "M": "mountain"
+  },
+  "rows": [
+    "GGGGGGGG",
+    "GGGGGGGG",
+    "GGGGGGGG",
+    "GGGGGGGG",
+    "GGGGGGGG",
+    "GGGGGGGG",
+    "GGGGGGGG",
+    "GGGGGGGG"
+  ]
+}

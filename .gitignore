@@ -18,3 +18,7 @@ training/checkpoints/
 experiments/**/results/
 *.onnx
 *.pt
+
+# build artifacts
+*.tsbuildinfo
+.firebase/

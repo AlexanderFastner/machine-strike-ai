@@ -36,14 +36,21 @@ destroying enough of the opponent's pieces before the **blight** consumes the bo
 - **[C]** Each tile holds **at most one piece**.
 - **[C]** Each tile has exactly one **base terrain type** from §2.2, plus a **corruption overlay** flag (§2.5).
 
-**[C] Two board sources, both supported:**
+**[C] For now: one flat test board.** `packages/data/boards/flat.json` is 8×8 all-grassland — every terrain
+modifier is 0, so combat maths is unmodified and any wrong number in a test is a bug in the formula rather than
+in the terrain. Build against this first.
+
+**Deferred until the game is playable:**
 
 1. **Board library** — authored, fixed layouts in `packages/data/boards/`, each a named 8×8 terrain grid.
    Mirrors how the real game ships a distinct board per opponent.
 2. **Random mirrored generator** — procedurally generated boards that are **symmetric, so neither side has an
    advantage**.
 
-**[C] Symmetry for generated boards: 180° rotational symmetry**, i.e. `tile(r, c) == tile(7−r, 7−c)`.
+Both are cheap to add later *provided* the board format stays a plain, hand-editable terrain grid — which is why
+`flat.json` already uses the full legend and row format rather than a special case.
+
+**[C] Symmetry for generated boards, when built: 180° rotational symmetry**, i.e. `tile(r, c) == tile(7−r, 7−c)`.
 
 > Why rotation and not reflection: with players deployed on opposite back rows, a reflection across the
 > horizontal midline gives each player the same terrain *ahead* of them, but **mirrored handedness** — what sits
@@ -208,11 +215,9 @@ Full roster: **[docs/pieces.md](pieces.md)** — 43 pieces, generated from
 > corrected against the in-game cards — **Scrounger** (health 4 → 5) and **Stormbird** (armor/weak were
 > inverted: now armor F, weak B). Both are recorded in `machines.json`'s `_notes`.
 >
-> **The Stormbird correction casts suspicion on three more pieces.** It was one of four in the roster listed as
-> armored-back / weak-front — an unusual layout — and it turned out to be inverted. The remaining three are
-> **Glinthawk** (Swoop, 2pts), **Sunwing** (Swoop, 3pts) and **Waterwing** (Pull, 4pts). Two are fellow birds,
-> which is exactly the pattern you would expect from a transcription slip propagating across similar entries.
-> Check these three first.
+> **[C] The other three armor-back/weak-front pieces are verified correct** — Glinthawk, Sunwing and Waterwing
+> genuinely are armored behind and weak in front. Only Stormbird was inverted. The layout is real, and it is a
+> nice piece of design: those machines want to be flown *past* a target and are punished for facing it head-on.
 
 - **[C]** **Points** is one number serving two roles: the **setup cost** to field the piece, and the **victory
   points the opponent gains** when it is destroyed.
@@ -721,9 +726,20 @@ All apply to every machine within the skill-holder's **Attack Range**.
 | **Stormbird** | Swoop | **3×3 in front** |
 
 - This is the source of the 1×3 frontal shape noted in §4.1 — it is a skill, not a machine type.
-- **Engine note:** these areas are **per-piece data**, not derivable from type alone (Thunderjaw and Tremortusk
-  are both Dash with the same range, but Stormbird's 3×3 does not follow from Swoop). Encode the shape in the
-  roster data as an offset list in the piece's own frame.
+- **[C] Encoded** in `machines.json` as `attackArea`: a list of **`[right, forward]` offsets in the piece's own
+  frame**, rotated by facing at resolution time. `+forward` is tiles ahead, `+right` is tiles to the piece's
+  right.
+
+| Piece | `attackArea` | Tiles |
+|---|---|---|
+| Thunderjaw | `[-1,1] [0,1] [1,1]` | 3 |
+| Tremortusk | `[-1,1] [0,1] [1,1]` | 3 |
+| Ravager | `[-1,2] [0,2] [1,2]` | 3 |
+| Stormbird | rows at forward 1, 2 and 3, each spanning right −1…+1 | 9 |
+
+These are **per-piece data, not derivable from type** — Thunderjaw and Tremortusk are both Dash at range 2 and
+share a shape, but Stormbird's 3×3 does not follow from Swoop, and Ravager's sits two tiles out because Gunner
+fires at exactly max range.
 - **[?]** Does `Sweep` hit **friendly** machines caught in the area, the way `Dash` does (§6.4)? **[H]** Yes —
   friendly fire is a property of area effects, not of targeting.
 - **[?]** Is damage computed independently per machine in the area, by the normal §6.2 formula against each
@@ -830,8 +846,8 @@ fully defined in the meantime — these refine it rather than unblock it.
 
 **Data and content**
 
-- [ ] §3.1 **Verify the roster** against in-game piece cards. **Start with Glinthawk, Sunwing and Waterwing** —
-      the three remaining armor-back/weak-front pieces, a layout that was already wrong once (Stormbird).
+- [ ] §3.1 **Verify the rest of the roster** against in-game piece cards. Four entries checked so far;
+      two were wrong, so assume more errors remain.
 - [ ] §10.6 Encode the four **`Sweep` areas** as per-piece offset lists in the roster data.
 - [ ] §2.1 Build the **board library**, and tune the random generator's terrain constraints.
 
