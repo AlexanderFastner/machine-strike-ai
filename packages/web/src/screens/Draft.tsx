@@ -14,9 +14,9 @@ import {
   type Team,
 } from "../data/machines";
 
-type Props = { onReady: (team: Team) => void; onBack: () => void };
+type Props = { player: 1 | 2; onReady: (team: Team) => void; onBack: () => void };
 
-export function Draft({ onReady, onBack }: Props) {
+export function Draft({ player, onReady, onBack }: Props) {
   const [team, setTeam] = useState<Team>([]);
   const spent = teamPoints(team);
   const left = TEAM_POINTS - spent;
@@ -31,7 +31,9 @@ export function Draft({ onReady, onBack }: Props) {
   return (
     <div className="screen wide">
       <Steps active={2} />
-      <h2 className="screen-title">Build your set</h2>
+      <h2 className="screen-title">
+        <span className={`who p${player}`}>Player {player}</span> — build your set
+      </h2>
 
       <div className="draft">
         <div className="roster">

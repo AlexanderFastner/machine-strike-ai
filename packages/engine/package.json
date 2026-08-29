@@ -1,0 +1,13 @@
+{
+  "name": "@ms/engine",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "tsx test/golden.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.12"
+  }
+}

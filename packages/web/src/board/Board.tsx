@@ -16,6 +16,8 @@ export type PlacedPiece = {
   owner: 1 | 2;
   /** Index into the owner's drafted set, so a placed piece can be picked back up. */
   poolIndex?: number;
+  uid?: number;
+  hp?: number;
 };
 
 type Props = {
@@ -25,9 +27,10 @@ type Props = {
   /** Tiles to mark as valid targets. */
   highlight?: (row: number, col: number) => boolean;
   onTileClick?: (row: number, col: number) => void;
+  selectedUid?: number;
 };
 
-export function Board({ grid, scale = 64, pieces = [], highlight, onTileClick }: Props) {
+export function Board({ grid, scale = 64, pieces = [], highlight, onTileClick, selectedUid }: Props) {
   const size = grid.length;
   const at = new Map(pieces.map((p) => [`${p.row}-${p.col}`, p]));
 
@@ -64,12 +67,15 @@ export function Board({ grid, scale = 64, pieces = [], highlight, onTileClick }:
                 <img className="terrain" src={t.tile} alt="" draggable={false} />
                 {piece && machine && (
                   <img
-                    className={`piece p${piece.owner}`}
+                    className={`piece p${piece.owner}${piece.uid === selectedUid ? " selected" : ""}`}
                     src={SPRITE[piece.machineId]}
                     alt={machine.name}
                     draggable={false}
                     style={{ transform: `rotate(${ROTATION[piece.facing]}deg)` }}
                   />
+                )}
+                {piece && machine && piece.hp !== undefined && (
+                  <span className={`hp p${piece.owner}`}>{piece.hp}</span>
                 )}
               </div>
             );

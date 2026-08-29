@@ -229,6 +229,13 @@ Stage 2, unaffordable to retrofit:
 - Precompute static tables: terrain values, distance/ray tables, facing→armor lookup per machine.
 - Zobrist hashing over pieces **and mutable terrain** for transposition tables and repetition detection.
 
+> **Deviation, recorded deliberately.** The Stage 1 engine (`packages/engine`) is written for *clarity* — plain
+> objects and copy-on-write transitions — not for the speed target above. That is the right trade while the goal
+> is a correct, playable hot-seat game, and the golden tests pin the behaviour so a rewrite is safe. **But it
+> must be converted to typed arrays and make/unmake before Stage 2**, because self-play generation is the
+> bottleneck there and a copying engine will not sustain it. Treat this as a scheduled debt, not a decision
+> reversed.
+
 **Purity.** No I/O, no randomness, no `Date.now()`. Randomness comes from an injected seeded PRNG. A game must
 replay bit-identically from `(seed, action list)`.
 
@@ -500,8 +507,8 @@ arena puzzle --suite tactics.msn --agent minimax:depth=6
 | Phase | Deliverable | Done when |
 |---|---|---|
 | **0. Rules** | ✅ **Done.** `docs/rules.md`, `docs/pieces.md`, roster data, placeholder art | No blocking questions remain |
-| **1. Engine** | `packages/engine` + tests | Perft frozen; fuzz clean; >100k actions/sec; branching factor measured |
-| **2. Hot-seat** | `packages/web` — draft, deploy, play, win | **Two humans play a full correct game end to end** |
+| **1. Engine** | `packages/engine` + tests | 🔄 In progress. Combat, movement, targeting, activations and knockback done, with 44 golden tests. Remaining: skills, corruption, perft, fuzz, and the typed-array conversion |
+| **2. Hot-seat** | `packages/web` — draft, deploy, play, win | 🔄 Landing, board select, two-player hidden draft, alternating deployment and the turn loop are live. Remaining: skills, corruption, sprint, overcharge |
 | **3. Polish** | Undo, save/load via MSN, damage + threat overlays | You'd hand it to a friend without explaining anything |
 
 **Deferred to after the hot-seat milestone** — real features, deliberately not on the critical path:

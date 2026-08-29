@@ -10,6 +10,7 @@ export default defineConfig({
     alias: {
       "@data": fileURLToPath(new URL("../data", import.meta.url)),
       "@assets": fileURLToPath(new URL("../../assets", import.meta.url)),
+      "@engine": fileURLToPath(new URL("../engine/src", import.meta.url)),
     },
   },
   // assets/ and packages/data/ live outside this package

@@ -24,6 +24,12 @@
       ],
       "@assets/*": [
         "../../assets/*"
+      ],
+      "@engine": [
+        "../engine/src/index.ts"
+      ],
+      "@engine/*": [
+        "../engine/src/*"
       ]
     }
   },
