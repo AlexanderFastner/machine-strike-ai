@@ -12,8 +12,14 @@ export const key = (r: number, c: number) => `${r},${c}`;
  * - no piece may finish on an occupied tile
  * - chasms are enterable only by Swoop (rules 2.6)
  * - marsh ends movement on entry, so we never expand out of one (rules 4.4)
+ * - corrupted tiles do the same, for every machine including flyers (rules 2.5)
  */
-export function reachable(state: GameState, piece: Piece, budget: number): Map<string, number> {
+export function reachable(
+  state: GameState,
+  piece: Piece,
+  budget: number,
+  corrupted: Set<string> = new Set(),
+): Map<string, number> {
   const m = MACHINE_BY_ID[piece.machineId];
   const flying = m.type === "Swoop";
   const seen = new Map<string, number>([[key(piece.row, piece.col), 0]]);
@@ -35,8 +41,8 @@ export function reachable(state: GameState, piece: Piece, budget: number): Map<s
         if (occupant && occupant.owner !== piece.owner) continue; // enemies block
 
         seen.set(key(r, c), step);
-        // Marsh ends movement: reachable, but you cannot continue out of it.
-        if (!stopsMovement(terrain)) next.push({ row: r, col: c });
+        // Marsh and corruption end movement: reachable, but you cannot continue out.
+        if (!stopsMovement(terrain) && !corrupted.has(key(r, c))) next.push({ row: r, col: c });
       }
     }
     frontier = next;

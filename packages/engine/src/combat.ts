@@ -1,5 +1,5 @@
 import { MACHINE_BY_ID, type Machine, type Side } from "./machines";
-import { TERRAIN_MOD, type TerrainId } from "./terrain";
+import { CORRUPTION_MOD, TERRAIN_MOD, type TerrainId } from "./terrain";
 import { FACINGS, opposite, type Facing, type Piece } from "./types";
 
 /**
@@ -7,7 +7,8 @@ import { FACINGS, opposite, type Facing, type Piece } from "./types";
  * Swoop ignores terrain penalties and gains +1 everywhere (rules 6.1).
  * Pull gains +1 while standing on marsh.
  */
-export function attackerCP(m: Machine, terrain: TerrainId): number {
+export function attackerCP(m: Machine, terrain: TerrainId, isCorrupted = false): number {
+  if (isCorrupted) return m.attack + CORRUPTION_MOD;
   const t = TERRAIN_MOD[terrain];
   if (m.type === "Swoop") return m.attack + Math.max(0, t) + 1;
   if (m.type === "Pull" && terrain === "marsh") return m.attack + t + 1;
@@ -18,8 +19,17 @@ export function attackerCP(m: Machine, terrain: TerrainId): number {
  * Defender Combat Power = terrain only, plus the facing modifier.
  * The defender's own Attack stat contributes nothing (rules 6.1).
  */
-export function defenderCP(m: Machine, terrain: TerrainId, sideHit: Side): number {
-  const t = m.type === "Swoop" ? Math.max(0, TERRAIN_MOD[terrain]) + 1 : TERRAIN_MOD[terrain];
+export function defenderCP(
+  m: Machine,
+  terrain: TerrainId,
+  sideHit: Side,
+  isCorrupted = false,
+): number {
+  const t = isCorrupted
+    ? CORRUPTION_MOD
+    : m.type === "Swoop"
+      ? Math.max(0, TERRAIN_MOD[terrain]) + 1
+      : TERRAIN_MOD[terrain];
   const facing = m.armor.includes(sideHit) ? +1 : m.weak.includes(sideHit) ? -1 : 0;
   return t + facing;
 }
@@ -48,12 +58,14 @@ export function resolveAttack(
   attackerTerrain: TerrainId,
   defenderTerrain: TerrainId,
   attackDir: Facing,
+  attackerCorrupted = false,
+  defenderCorrupted = false,
 ): Resolution {
   const am = MACHINE_BY_ID[attacker.machineId];
   const dm = MACHINE_BY_ID[defender.machineId];
   const sideHit = sideHitBy(defender.facing, attackDir);
-  const aCP = attackerCP(am, attackerTerrain);
-  const dCP = defenderCP(dm, defenderTerrain, sideHit);
+  const aCP = attackerCP(am, attackerTerrain, attackerCorrupted);
+  const dCP = defenderCP(dm, defenderTerrain, sideHit, defenderCorrupted);
 
   return aCP > dCP
     ? { kind: "damage", damage: aCP - dCP, attackerCP: aCP, defenderCP: dCP, sideHit }

@@ -1,12 +1,15 @@
+import { useState } from "react";
 import flat from "@data/boards/flat.json";
 import { Board } from "../board/Board";
 import { parseBoard, type BoardFile } from "../board/terrain";
 
 const BOARDS: BoardFile[] = [flat as BoardFile];
 
-type Props = { onPick: (board: BoardFile) => void; onBack: () => void };
+type Props = { onPick: (board: BoardFile, corruption: boolean) => void; onBack: () => void };
 
 export function BoardSelect({ onPick, onBack }: Props) {
+  const [corruption, setCorruption] = useState(true);
+
   return (
     <div className="screen">
       <Steps active={1} />
@@ -14,7 +17,7 @@ export function BoardSelect({ onPick, onBack }: Props) {
 
       <div className="board-choices">
         {BOARDS.map((b) => (
-          <button key={b.id} className="board-choice" onClick={() => onPick(b)}>
+          <button key={b.id} className="board-choice" onClick={() => onPick(b, corruption)}>
             <Board grid={parseBoard(b)} scale={32} />
             <div className="choice-text">
               <b>{b.name}</b>
@@ -23,6 +26,22 @@ export function BoardSelect({ onPick, onBack }: Props) {
           </button>
         ))}
       </div>
+
+      <label className="option">
+        <input
+          type="checkbox"
+          checked={corruption}
+          onChange={(e) => setCorruption(e.target.checked)}
+        />
+        <span>
+          <b>Corruption</b>
+          <em>
+            {corruption
+              ? "The blight creeps in from both sides, one tile per turn. Standing in it costs 2 health a round, and the game ends when it covers the board — about 32 rounds."
+              : "No blight. The game instead ends after a fixed 50 rounds, with the higher victory-point total winning."}
+          </em>
+        </span>
+      </label>
 
       <p className="footnote">
         More boards, and a symmetric random generator, come later — the board format is already a plain

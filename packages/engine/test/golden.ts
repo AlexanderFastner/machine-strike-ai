@@ -144,5 +144,76 @@ const wall = newGame(grid, [
 ]);
 eq("an enemy blocks the path", movesFor(wall, wall.pieces[0]).has(key(7, 2)), false);
 
+
+// --- corruption: the blight schedule (rules 2.5) --------------------------
+const { corruptionOrder, corruptedTiles, blightDone, isCorrupted } = await import("../src/index.ts");
+
+const coord = ([r, c]) => "abcdefgh"[c] + (8 - r);
+const p1Order = corruptionOrder(8, 1);
+const p2Order = corruptionOrder(8, 2);
+
+// Each front takes exactly half the board.
+eq("P1 front covers half", p1Order.length, 32);
+eq("P2 front covers half", p2Order.length, 32);
+
+// P1 starts on the row closest to them (rank 1) and fills right to left from
+// their own point of view: facing north, their right is the high columns.
+eq("P1 first six tiles", p1Order.slice(0, 6).map(coord), ["h1", "g1", "f1", "e1", "d1", "c1"]);
+// Serpentine: the next row reverses.
+eq("P1 second row reverses", p1Order.slice(8, 12).map(coord), ["a2", "b2", "c2", "d2"]);
+eq("P1 third row reverses back", p1Order.slice(16, 19).map(coord), ["h3", "g3", "f3"]);
+
+// P2 sits opposite: their closest row is rank 8, and facing south their right
+// is the low columns.
+eq("P2 first six tiles", p2Order.slice(0, 6).map(coord), ["a8", "b8", "c8", "d8", "e8", "f8"]);
+eq("P2 second row reverses", p2Order.slice(8, 12).map(coord), ["h7", "g7", "f7", "e7"]);
+
+// The fronts meet exactly in the middle and never overlap.
+const all = new Set([...p1Order, ...p2Order].map(coord));
+eq("the two fronts tile the whole board", all.size, 64);
+eq("P1 never crosses the midline", p1Order.every(([r]) => r >= 4), true);
+eq("P2 never crosses the midline", p2Order.every(([r]) => r <= 3), true);
+
+eq("full board ends the game", blightDone(8, { enabled: true, fronts: { 1: 32, 2: 32 } }), true);
+eq("half a board does not", blightDone(8, { enabled: true, fronts: { 1: 32, 2: 31 } }), false);
+eq("disabled blight never ends it", blightDone(8, { enabled: false, fronts: { 1: 32, 2: 32 } }), false);
+eq("disabled blight corrupts nothing", corruptedTiles(8, { enabled: false, fronts: { 1: 9, 2: 9 } }).size, 0);
+
+// --- corruption in play ---------------------------------------------------
+// A machine standing in the blight loses 2 at the start of its OWNER's turn,
+// and nothing on the turn the blight arrives underneath it.
+let g = newGame(grid, [
+  { machineId: "clawstrider", owner: 1, row: 7, col: 7, facing: "N" }, // h1: P1's very first blight tile
+  { machineId: "burrower", owner: 2, row: 0, col: 0, facing: "S" },
+], true);
+eq("nothing corrupted at kickoff", corruptedTiles(8, g.corruption).size, 0);
+
+g = endTurn(g);                       // -> P2's turn: turnNumber 2, P2's front opens
+eq("P2 front opened", g.corruption.fronts[2], 1);
+eq("P1 front still closed", g.corruption.fronts[1], 0);
+
+g = endTurn(g);                       // -> P1's turn: P1's front takes h1, under the Clawstrider
+eq("P1 front opened", g.corruption.fronts[1], 1);
+eq("blight is under the Clawstrider", isCorrupted(g, 7, 7), true);
+eq("but it took no damage this turn", g.pieces.find(p => p.owner === 1).hp, 8);
+
+g = endTurn(g); g = endTurn(g);       // back round to P1
+eq("now it burns for 2", g.pieces.find(p => p.owner === 1).hp, 6);
+
+// Corruption replaces the terrain modifier entirely: -2 either way.
+eq("corrupted attacker CP", attackerCP({ type: "Melee", attack: 3 }, "mountain", true), 1);
+eq("corrupted defender CP", defenderCP(dm([], []), "mountain", "F", true), -2);
+
+// With corruption off the 50-round limit applies instead.
+let off = newGame(grid, [
+  { machineId: "burrower", owner: 1, row: 7, col: 0, facing: "N" },
+  { machineId: "burrower", owner: 2, row: 0, col: 0, facing: "S" },
+], false);
+eq("no blight when switched off", off.corruption.enabled, false);
+off = { ...off, round: 50, vp: { 1: 3, 2: 1 } };
+eq("game runs at the limit", endTurn(off).winner, null);
+off = { ...off, round: 50, turn: 2, vp: { 1: 3, 2: 1 } };
+eq("higher VP wins on time", endTurn(off).winner, 1);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

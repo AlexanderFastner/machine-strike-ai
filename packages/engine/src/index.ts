@@ -1,4 +1,5 @@
 export * from "./terrain";
+export * from "./corruption";
 export * from "./machines";
 export * from "./types";
 export * from "./combat";

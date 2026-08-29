@@ -11,10 +11,10 @@ import type { Deployment, Owner, Team } from "./data/machines";
 type Screen =
   | { at: "landing" }
   | { at: "board" }
-  | { at: "draft"; board: BoardFile; player: Owner; teams: Partial<Record<Owner, Team>> }
-  | { at: "handoff"; board: BoardFile; teams: Partial<Record<Owner, Team>> }
-  | { at: "deploy"; board: BoardFile; teams: Record<Owner, Team> }
-  | { at: "game"; board: BoardFile; deployments: Deployment[] };
+  | { at: "draft"; board: BoardFile; corruption: boolean; player: Owner; teams: Partial<Record<Owner, Team>> }
+  | { at: "handoff"; board: BoardFile; corruption: boolean; teams: Partial<Record<Owner, Team>> }
+  | { at: "deploy"; board: BoardFile; corruption: boolean; teams: Record<Owner, Team> }
+  | { at: "game"; board: BoardFile; corruption: boolean; deployments: Deployment[] };
 
 export function App() {
   const [screen, setScreen] = useState<Screen>({ at: "landing" });
@@ -26,13 +26,15 @@ export function App() {
     case "board":
       return (
         <BoardSelect
-          onPick={(board) => setScreen({ at: "draft", board, player: 1, teams: {} })}
+          onPick={(board, corruption) =>
+            setScreen({ at: "draft", board, corruption, player: 1, teams: {} })
+          }
           onBack={() => setScreen({ at: "landing" })}
         />
       );
 
     case "draft": {
-      const { board, player, teams } = screen;
+      const { board, corruption, player, teams } = screen;
       return (
         <Draft
           key={player}
@@ -41,8 +43,8 @@ export function App() {
             const next = { ...teams, [player]: team };
             setScreen(
               player === 1
-                ? { at: "handoff", board, teams: next }
-                : { at: "deploy", board, teams: next as Record<Owner, Team> },
+                ? { at: "handoff", board, corruption, teams: next }
+                : { at: "deploy", board, corruption, teams: next as Record<Owner, Team> },
             );
           }}
           onBack={() => setScreen({ at: "board" })}
@@ -56,7 +58,13 @@ export function App() {
           to={2}
           what="Build your set"
           onReady={() =>
-            setScreen({ at: "draft", board: screen.board, player: 2, teams: screen.teams })
+            setScreen({
+              at: "draft",
+              board: screen.board,
+              corruption: screen.corruption,
+              player: 2,
+              teams: screen.teams,
+            })
           }
         />
       );
@@ -70,6 +78,7 @@ export function App() {
             setScreen({
               at: "game",
               board: screen.board,
+              corruption: screen.corruption,
               deployments: placed.map((p) => ({
                 machineId: p.machineId,
                 owner: p.owner,
@@ -87,6 +96,7 @@ export function App() {
       return (
         <Game
           board={screen.board}
+          corruption={screen.corruption}
           deployments={screen.deployments}
           onQuit={() => setScreen({ at: "landing" })}
         />

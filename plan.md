@@ -507,8 +507,8 @@ arena puzzle --suite tactics.msn --agent minimax:depth=6
 | Phase | Deliverable | Done when |
 |---|---|---|
 | **0. Rules** | ✅ **Done.** `docs/rules.md`, `docs/pieces.md`, roster data, placeholder art | No blocking questions remain |
-| **1. Engine** | `packages/engine` + tests | 🔄 In progress. Combat, movement, targeting, activations and knockback done, with 44 golden tests. Remaining: skills, corruption, perft, fuzz, and the typed-array conversion |
-| **2. Hot-seat** | `packages/web` — draft, deploy, play, win | 🔄 Landing, board select, two-player hidden draft, alternating deployment and the turn loop are live. Remaining: skills, corruption, sprint, overcharge |
+| **1. Engine** | `packages/engine` + tests | 🔄 In progress. Combat, movement, targeting, activations, knockback and corruption done, with 70 golden tests. Remaining: skills, sprint, overcharge, perft, fuzz, and the typed-array conversion |
+| **2. Hot-seat** | `packages/web` — draft, deploy, play, win | 🔄 Landing, board select (with the corruption toggle), two-player hidden draft, alternating deployment, and a turn loop with combat and the blight. Remaining: skills, sprint, overcharge |
 | **3. Polish** | Undo, save/load via MSN, damage + threat overlays | You'd hand it to a friend without explaining anything |
 
 **Deferred to after the hot-seat milestone** — real features, deliberately not on the critical path:

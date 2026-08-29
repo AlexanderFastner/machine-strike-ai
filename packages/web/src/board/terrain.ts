@@ -4,10 +4,13 @@ import grassland from "@assets/terrain/grass.png";
 import forest from "@assets/terrain/forest.png";
 import hill from "@assets/terrain/hills.png";
 import mountain from "@assets/terrain/mountain.png";
+import corrupt from "@assets/terrain/corrupt.png";
 import { TERRAIN_MOD, TERRAIN_IDS, type TerrainId } from "@engine";
 
 export { TERRAIN_IDS, type TerrainId };
 export { parseBoard, type BoardFile } from "@engine";
+
+export const CORRUPT_TILE = corrupt;
 
 const ART: Record<TerrainId, string> = { chasm, marsh, grassland, forest, hill, mountain };
 

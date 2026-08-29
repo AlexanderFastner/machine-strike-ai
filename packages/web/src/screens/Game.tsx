@@ -5,8 +5,11 @@ import { SPRITE } from "../data/machines";
 import {
   FACINGS,
   MACHINE_BY_ID,
+  ROUND_LIMIT,
   activatablePieces,
   attackWith,
+  blightTotal,
+  corrupted,
   endActivation,
   endTurn,
   key,
@@ -21,15 +24,22 @@ import {
   type Owner,
 } from "../data/machines";
 
-type Props = { board: BoardFile; deployments: Deployment[]; onQuit: () => void };
+type Props = {
+  board: BoardFile;
+  corruption: boolean;
+  deployments: Deployment[];
+  onQuit: () => void;
+};
 
-export function Game({ board, deployments, onQuit }: Props) {
+export function Game({ board, corruption, deployments, onQuit }: Props) {
   const grid = useMemo(() => parseBoard(board), [board]);
-  const [state, setState] = useState<GameState>(() => newGame(grid, deployments));
+  const [state, setState] = useState<GameState>(() => newGame(grid, deployments, corruption));
   const [selectedUid, setSelectedUid] = useState<number | null>(null);
   const [hasMoved, setHasMoved] = useState(false);
 
   const canAct = activatablePieces(state, state.turn);
+  const blight = corrupted(state);
+  const blightPct = Math.round((blight.size / blightTotal(grid.length)) * 100);
   const selected = state.pieces.find((p) => p.uid === selectedUid) ?? null;
   const selectable = new Set(canAct.map((p) => p.uid));
 
@@ -93,6 +103,14 @@ export function Game({ board, deployments, onQuit }: Props) {
           <span className="round">
             {state.activationsLeft} activation{state.activationsLeft === 1 ? "" : "s"} left
           </span>
+          {state.corruption.enabled ? (
+            <div className="blight-bar" title={`${blight.size} of ${blightTotal(grid.length)} tiles corrupted`}>
+              <div className="blight-fill" style={{ width: `${blightPct}%` }} />
+              <span>Blight {blightPct}%</span>
+            </div>
+          ) : (
+            <span className="round">Round limit {ROUND_LIMIT}</span>
+          )}
         </div>
         <Score state={state} owner={2} />
       </div>
@@ -102,6 +120,7 @@ export function Game({ board, deployments, onQuit }: Props) {
           grid={grid}
           scale={64}
           pieces={state.pieces}
+          corrupted={blight}
           selectedUid={selectedUid ?? undefined}
           highlight={(r, c) => moves.has(key(r, c))}
           onTileClick={clickTile}

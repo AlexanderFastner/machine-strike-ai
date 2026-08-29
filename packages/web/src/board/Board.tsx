@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { TERRAIN, type TerrainId } from "./terrain";
+import { TERRAIN, CORRUPT_TILE, type TerrainId } from "./terrain";
 import { MACHINE_BY_ID, SPRITE } from "../data/machines";
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
@@ -28,9 +28,19 @@ type Props = {
   highlight?: (row: number, col: number) => boolean;
   onTileClick?: (row: number, col: number) => void;
   selectedUid?: number;
+  /** Keys "row,col" of blighted tiles. */
+  corrupted?: Set<string>;
 };
 
-export function Board({ grid, scale = 64, pieces = [], highlight, onTileClick, selectedUid }: Props) {
+export function Board({
+  grid,
+  scale = 64,
+  pieces = [],
+  highlight,
+  onTileClick,
+  selectedUid,
+  corrupted,
+}: Props) {
   const size = grid.length;
   const at = new Map(pieces.map((p) => [`${p.row}-${p.col}`, p]));
 
@@ -48,6 +58,7 @@ export function Board({ grid, scale = 64, pieces = [], highlight, onTileClick, s
             const t = TERRAIN[id];
             const piece = at.get(`${r}-${c}`);
             const lit = highlight?.(r, c) ?? false;
+            const blighted = corrupted?.has(`${r},${c}`) ?? false;
             const coord = `${FILES[c]}${size - r}`;
             const machine = piece && MACHINE_BY_ID[piece.machineId];
 
@@ -58,13 +69,13 @@ export function Board({ grid, scale = 64, pieces = [], highlight, onTileClick, s
                 role="gridcell"
                 aria-label={`${coord}, ${t.name}${machine ? `, ${machine.name}` : ""}`}
                 title={
-                  machine
-                    ? `${machine.name} · ${coord} · ${t.name} (${t.modifier >= 0 ? "+" : ""}${t.modifier})`
-                    : `${coord} · ${t.name} (${t.modifier >= 0 ? "+" : ""}${t.modifier})`
+                  (machine ? `${machine.name} · ` : "") +
+                  (blighted ? `${coord} · Corrupted (-2)` : `${coord} · ${t.name} (${t.modifier >= 0 ? "+" : ""}${t.modifier})`)
                 }
                 onClick={onTileClick ? () => onTileClick(r, c) : undefined}
               >
                 <img className="terrain" src={t.tile} alt="" draggable={false} />
+                {blighted && <img className="terrain blight" src={CORRUPT_TILE} alt="" draggable={false} />}
                 {piece && machine && (
                   <img
                     className={`piece p${piece.owner}${piece.uid === selectedUid ? " selected" : ""}`}

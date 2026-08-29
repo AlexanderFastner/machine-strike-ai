@@ -1,4 +1,5 @@
 import type { TerrainId } from "./terrain";
+import type { Corruption } from "./corruption";
 
 export type Owner = 1 | 2;
 export type Facing = "N" | "E" | "S" | "W";
@@ -34,10 +35,16 @@ export type GameState = {
   vp: Record<Owner, number>;
   log: string[];
   winner: Owner | "draw" | null;
+  /** Player turns taken so far; the blight does not spread on the very first one. */
+  turnNumber: number;
+  corruption: Corruption;
 };
 
 export const VP_TO_WIN = 7;
 export const ACTIVATIONS_PER_TURN = 2;
+/** Used only when corruption is switched off — the blight is otherwise the clock. */
+export const ROUND_LIMIT = 50;
+export const CORRUPTION_DAMAGE = 2;
 
 export const other = (o: Owner): Owner => (o === 1 ? 2 : 1);
 export const at = (s: GameState, row: number, col: number) =>

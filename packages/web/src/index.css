@@ -394,3 +394,29 @@ button.big { padding: 0.7rem 1.6rem; font-size: 1rem; border-radius: 10px; }
   font-size: 0.76rem; color: var(--muted); max-height: 11rem; overflow-y: auto;
 }
 .log li:first-child { color: var(--text); }
+
+/* ---------- corruption ---------- */
+
+.tile .terrain.blight { opacity: 0.92; }
+
+.option {
+  display: flex; align-items: flex-start; gap: 0.6rem;
+  padding: 0.8rem; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 10px;
+  cursor: pointer; max-width: 40rem;
+}
+.option input { margin-top: 0.15rem; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.option span { display: flex; flex-direction: column; gap: 0.2rem; }
+.option b { font-size: 0.88rem; }
+.option em { font-style: normal; font-size: 0.76rem; color: var(--muted); line-height: 1.5; }
+
+.blight-bar {
+  position: relative; width: 9rem; height: 1.05rem;
+  background: #151b23; border: 1px solid var(--line); border-radius: 999px; overflow: hidden;
+}
+.blight-fill { position: absolute; inset: 0 auto 0 0; background: #6b3a5e; transition: width 200ms ease; }
+.blight-bar span {
+  position: relative; display: block; text-align: center;
+  font-size: 0.62rem; line-height: 1.05rem; color: #e9d5e4;
+  font-variant-numeric: tabular-nums;
+}

@@ -1,11 +1,14 @@
 import { resolveAttack } from "./combat";
+import { blightDone, corruptedTiles, nextTileFor } from "./corruption";
 import { MACHINE_BY_ID } from "./machines";
 import { reachable } from "./movement";
 import { targetOf } from "./targeting";
 import { flyingOnly, type TerrainId } from "./terrain";
 import {
   ACTIVATIONS_PER_TURN,
+  CORRUPTION_DAMAGE,
   DELTA,
+  ROUND_LIMIT,
   VP_TO_WIN,
   at,
   inBounds,
@@ -18,7 +21,11 @@ import {
 
 export type Deployment = { machineId: string; owner: Owner; row: number; col: number; facing: Facing };
 
-export function newGame(grid: TerrainId[][], deployments: Deployment[]): GameState {
+export function newGame(
+  grid: TerrainId[][],
+  deployments: Deployment[],
+  corruptionEnabled = true,
+): GameState {
   return {
     grid,
     pieces: deployments.map((d, i) => ({
@@ -37,8 +44,15 @@ export function newGame(grid: TerrainId[][], deployments: Deployment[]): GameSta
     vp: { 1: 0, 2: 0 },
     log: ["Player 1 to move."],
     winner: null,
+    turnNumber: 1,
+    corruption: { enabled: corruptionEnabled, fronts: { 1: 0, 2: 0 } },
   };
 }
+
+/** A corrupted tile counts only as corrupted: the terrain beneath stops mattering. */
+export const corrupted = (s: GameState) => corruptedTiles(s.grid.length, s.corruption);
+export const isCorrupted = (s: GameState, row: number, col: number) =>
+  corrupted(s).has(`${row},${col}`);
 
 const clone = (s: GameState): GameState => ({
   ...s,
@@ -46,6 +60,7 @@ const clone = (s: GameState): GameState => ({
   activated: [...s.activated],
   vp: { ...s.vp },
   log: [...s.log],
+  corruption: { ...s.corruption, fronts: { ...s.corruption.fronts } },
 });
 
 const name = (p: Piece) => MACHINE_BY_ID[p.machineId].name;
@@ -63,7 +78,7 @@ export function activatable(s: GameState, owner: Owner): Piece[] {
 
 export function movesFor(s: GameState, piece: Piece, sprint = false) {
   const m = MACHINE_BY_ID[piece.machineId];
-  return reachable(s, piece, m.movement + (sprint ? 1 : 0));
+  return reachable(s, piece, m.movement + (sprint ? 1 : 0), corrupted(s));
 }
 
 export function movePiece(s0: GameState, uid: number, row: number, col: number): GameState {
@@ -122,13 +137,23 @@ export function attackWith(s0: GameState, uid: number): GameState {
   const target = targetOf(s, attacker);
   if (target.kind === "none") return s0;
 
+  const blighted = corrupted(s);
   const terrainAt = (p: Piece) => s.grid[p.row][p.col];
+  const blightedAt = (p: Piece) => blighted.has(`${p.row},${p.col}`);
   const victims = target.kind === "lane" ? target.victims : [target.victim];
 
   for (const v0 of victims) {
     const victim = s.pieces.find((x) => x.uid === v0.uid);
     if (!victim) continue;
-    const res = resolveAttack(attacker, victim, terrainAt(attacker), terrainAt(victim), target.dir);
+    const res = resolveAttack(
+      attacker,
+      victim,
+      terrainAt(attacker),
+      terrainAt(victim),
+      target.dir,
+      blightedAt(attacker),
+      blightedAt(victim),
+    );
 
     if (res.kind === "damage") {
       victim.hp -= res.damage;
@@ -203,10 +228,54 @@ export function endTurn(s0: GameState): GameState {
   const next = other(s.turn);
   if (next === 1) s.round += 1;
   s.turn = next;
+  s.turnNumber += 1;
   s.activationsLeft = ACTIVATIONS_PER_TURN;
   s.activated = [];
   s.log.push(`— Player ${next} to move (round ${s.round}) —`);
+  startOfTurn(s);
   return s;
+}
+
+/**
+ * Start-of-turn sequence (rules 5.2). Damage comes BEFORE the spread, so a tile
+ * corrupted this turn deals nothing this turn — the machine it appears under
+ * always gets one turn to walk out.
+ */
+function startOfTurn(s: GameState) {
+  if (!s.corruption.enabled) {
+    if (s.round > ROUND_LIMIT) endOnTime(s);
+    return;
+  }
+
+  const blighted = corrupted(s);
+  for (const p of [...s.pieces]) {
+    if (p.owner !== s.turn) continue;
+    if (!blighted.has(`${p.row},${p.col}`)) continue;
+    p.hp -= CORRUPTION_DAMAGE;
+    s.log.push(`${name(p)} is being consumed by the blight (-${CORRUPTION_DAMAGE}).`);
+    if (p.hp <= 0) kill(s, p, other(p.owner));
+  }
+
+  // No spread on the game's very first turn.
+  if (s.turnNumber >= 2) {
+    const tile = nextTileFor(s.grid.length, s.corruption, s.turn);
+    if (tile) {
+      s.corruption.fronts[s.turn] += 1;
+      s.log.push(`The blight spreads.`);
+    }
+  }
+
+  if (blightDone(s.grid.length, s.corruption) && !s.winner) endOnTime(s);
+}
+
+/** Nobody reached 7 VP: highest total wins, equal is a draw. */
+function endOnTime(s: GameState) {
+  s.winner = s.vp[1] > s.vp[2] ? 1 : s.vp[2] > s.vp[1] ? 2 : "draw";
+  s.log.push(
+    s.winner === "draw"
+      ? "The board is consumed — level on victory points, a draw."
+      : `The board is consumed — Player ${s.winner} wins on victory points.`,
+  );
 }
 
 export { targetOf, activatable as activatablePieces };
