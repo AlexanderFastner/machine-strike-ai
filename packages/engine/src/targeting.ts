@@ -1,10 +1,12 @@
 import { MACHINE_BY_ID } from "./machines";
 import { DELTA, at, inBounds, type Facing, type GameState, type Piece } from "./types";
+import { hasSweep, sweepTiles } from "./skills";
 
 export type Target =
   | { kind: "none"; reason: string }
   | { kind: "single"; victim: Piece; dir: Facing }
-  | { kind: "lane"; victims: Piece[]; dir: Facing; landing: { row: number; col: number } };
+  | { kind: "lane"; victims: Piece[]; dir: Facing; landing: { row: number; col: number } }
+  | { kind: "area"; victims: Piece[]; dir: Facing };
 
 /**
  * Targeting is derived from type, facing and range — never chosen (rules 3.3).
@@ -14,6 +16,19 @@ export function targetOf(state: GameState, piece: Piece): Target {
   const m = MACHINE_BY_ID[piece.machineId];
   const dir = piece.facing;
   const [dr, dc] = DELTA[dir];
+
+  // Sweep replaces the normal ray with the piece's own area (rules 10.6).
+  // Like Dash, an area effect does not discriminate between sides.
+  if (hasSweep(m)) {
+    const victims = sweepTiles(piece, m)
+      .filter(([r, c]) => inBounds(state, r, c))
+      .map(([r, c]) => at(state, r, c))
+      .filter((p): p is Piece => !!p);
+    if (victims.length === 0) return { kind: "none", reason: "Nothing in the sweep" };
+    if (!victims.some((v) => v.owner !== piece.owner))
+      return { kind: "none", reason: "Only your own machines are in the sweep" };
+    return { kind: "area", victims, dir };
+  }
 
   if (m.type === "Dash") {
     // Charges to the end of its range, hitting everything in the lane —

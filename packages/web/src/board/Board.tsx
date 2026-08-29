@@ -30,6 +30,10 @@ type Props = {
   selectedUid?: number;
   /** Keys "row,col" of blighted tiles. */
   corrupted?: Set<string>;
+  /** Combat Power to show under each piece. */
+  powerOf?: (piece: PlacedPiece) => number;
+  /** Predicted damage per piece uid, for the attack preview. */
+  preview?: Map<number, { damage: number; lethal: boolean }>;
 };
 
 export function Board({
@@ -40,6 +44,8 @@ export function Board({
   onTileClick,
   selectedUid,
   corrupted,
+  powerOf,
+  preview,
 }: Props) {
   const size = grid.length;
   const at = new Map(pieces.map((p) => [`${p.row}-${p.col}`, p]));
@@ -87,6 +93,16 @@ export function Board({
                 )}
                 {piece && machine && piece.hp !== undefined && (
                   <span className={`hp p${piece.owner}`}>{piece.hp}</span>
+                )}
+                {piece && machine && powerOf && (
+                  <span className="power" title="Combat Power from this tile">
+                    {powerOf(piece)}
+                  </span>
+                )}
+                {piece && preview?.has(piece.uid!) && (
+                  <span className={`dmg${preview.get(piece.uid!)!.lethal ? " lethal" : ""}`}>
+                    −{preview.get(piece.uid!)!.damage}
+                  </span>
                 )}
               </div>
             );

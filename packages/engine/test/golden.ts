@@ -215,5 +215,107 @@ eq("game runs at the limit", endTurn(off).winner, null);
 off = { ...off, round: 50, turn: 2, vp: { 1: 3, 2: 1 } };
 eq("higher VP wins on time", endTurn(off).winner, 1);
 
+
+// --- skills (rules 10) ----------------------------------------------------
+const { stepTerrain, rotateOffset, sweepTiles, attackPowerMod, previewAttack,
+        combatPowerOf, terrainSkillBonus, shieldBonus } = await import("../src/index.ts");
+
+// 1. Attack-from-terrain bonuses: one per tier, +1 CP, only on that terrain.
+eq("Gallop on grassland", terrainSkillBonus({ skill: "Gallop" }, "grassland", false), 1);
+eq("Gallop elsewhere", terrainSkillBonus({ skill: "Gallop" }, "forest", false), 0);
+eq("Stalk on forest", terrainSkillBonus({ skill: "Stalk" }, "forest", false), 1);
+eq("Climb on hill", terrainSkillBonus({ skill: "Climb" }, "hill", false), 1);
+eq("High Ground on mountain", terrainSkillBonus({ skill: "High Ground" }, "mountain", false), 1);
+eq("no terrain bonus while corrupted", terrainSkillBonus({ skill: "Climb" }, "hill", true), 0);
+
+// 2/3. The ladder clamps, and skills can never dig a chasm.
+eq("marsh is the skill floor", stepTerrain("marsh", -1), "marsh");
+eq("mountain is the ceiling", stepTerrain("mountain", +1), "mountain");
+eq("grassland steps up", stepTerrain("grassland", +1), "forest");
+eq("forest steps down", stepTerrain("forest", -1), "grassland");
+
+// Burn converts the TARGET's forest tile.
+let burn = newGame(parseBoard({ id:"b", name:"b", description:"",
+  rows: ["GGGGGGGG","GGGFGGGG","GGGGGGGG","GGGGGGGG","GGGGGGGG","GGGGGGGG","GGGGGGGG","GGGGGGGG"] }), [
+  { machineId: "fireclaw", owner: 1, row: 3, col: 3, facing: "N" },   // atk 4, range 2, Burn
+  { machineId: "burrower", owner: 2, row: 1, col: 3, facing: "N" },   // stands on forest
+]);
+eq("target starts on forest", burn.grid[1][3], "forest");
+burn = attackWith(burn, burn.pieces[0].uid);
+eq("Burn scorches the target's tile", burn.grid[1][3], "grassland");
+
+// Alter Terrain lowers the attacker's tile and raises the target's.
+let alter = newGame(grid, [
+  { machineId: "rockbreaker", owner: 1, row: 4, col: 3, facing: "N" }, // Alter Terrain, range 2
+  { machineId: "burrower", owner: 2, row: 2, col: 3, facing: "N" },
+]);
+alter = attackWith(alter, alter.pieces[0].uid);
+eq("attacker's own ground sinks", alter.grid[4][3], "marsh");
+eq("target's ground rises", alter.grid[2][3], "forest");
+
+// 4. Empower and Blind stack, and apply only to the right side.
+const aura = newGame(grid, [
+  { machineId: "longleg", owner: 1, row: 4, col: 3, facing: "N" },     // Empower, range 2
+  { machineId: "leaplasher", owner: 1, row: 4, col: 4, facing: "N" },  // Empower, range 1
+  { machineId: "burrower", owner: 1, row: 4, col: 2, facing: "N" },
+  { machineId: "redeye-watcher", owner: 2, row: 3, col: 2, facing: "S" }, // Blind, range 2
+]);
+const ally = aura.pieces[2];
+// +1 from Longleg (dist 1), +1 from Leaplasher (dist 2 > range 1, so no), -1 from Blind (dist 1)
+eq("auras stack and cancel", attackPowerMod(aura, ally), 0);
+const farAlly = { ...ally, row: 5, col: 3 };
+eq("out of the enemy's blind range", attackPowerMod({ ...aura, pieces: [...aura.pieces.slice(0,2), farAlly] }, farAlly), 1);
+
+// 5. Shield adds to the defender's Combat Power.
+eq("Shield defends", shieldBonus({ skill: "Shield" }), 1);
+eq("no shield, no bonus", shieldBonus({ skill: null }), 0);
+
+// 6. Retaliate: the target turns to face its attacker and hits back for 1.
+let ret = newGame(grid, [
+  { machineId: "burrower", owner: 1, row: 4, col: 3, facing: "N" },        // atk 2, range 1
+  { machineId: "rollerback", owner: 2, row: 3, col: 3, facing: "N" },      // Retaliate, range 2
+]);
+const before = ret.pieces[0].hp;
+ret = attackWith(ret, ret.pieces[0].uid);
+eq("retaliation costs the attacker 1", ret.pieces.find(p => p.owner === 1).hp, before - 1);
+eq("retaliator turns to face", ret.pieces.find(p => p.owner === 2).facing, "S");
+
+// 7. Sweep: the area rotates with facing.
+eq("sweep offset facing north", rotateOffset("N", 1, 1), [-1, 1]);
+eq("sweep offset facing east", rotateOffset("E", 1, 1), [1, 1]);
+eq("sweep offset facing south", rotateOffset("S", 1, 1), [1, -1]);
+eq("sweep offset facing west", rotateOffset("W", 1, 1), [-1, -1]);
+eq("Thunderjaw sweeps three tiles", sweepTiles({ row: 4, col: 3, facing: "N" }, MACHINE_BY_ID["thunderjaw"]).length, 3);
+eq("Stormbird sweeps nine", sweepTiles({ row: 5, col: 3, facing: "N" }, MACHINE_BY_ID["stormbird"]).length, 9);
+
+// A Sweep hits everything in the area, both sides.
+let sweep = newGame(grid, [
+  { machineId: "tremortusk", owner: 1, row: 4, col: 3, facing: "N" },  // 1x3 directly ahead
+  { machineId: "burrower", owner: 2, row: 3, col: 2, facing: "S" },
+  { machineId: "burrower", owner: 2, row: 3, col: 4, facing: "S" },
+]);
+const sweepPreview = previewAttack(sweep, sweep.pieces[0].uid);
+eq("sweep hits both enemies at once", sweepPreview.hits.length, 2);
+
+// --- preview matches what actually happens --------------------------------
+const pv = newGame(grid, [
+  { machineId: "scrapper", owner: 1, row: 4, col: 3, facing: "N" },
+  { machineId: "burrower", owner: 2, row: 2, col: 3, facing: "S" },
+]);
+const predicted = previewAttack(pv, pv.pieces[0].uid);
+const actual = attackWith(pv, pv.pieces[0].uid);
+const survivor = actual.pieces.find(p => p.owner === 2);
+eq("preview damage matches the real hit", predicted.hits[0].damage, 4 - survivor.hp);
+eq("preview reports no self damage here", predicted.selfDamage, 0);
+
+// Preview also predicts self-damage from retaliation.
+const retPreview = previewAttack(newGame(grid, [
+  { machineId: "burrower", owner: 1, row: 4, col: 3, facing: "N" },
+  { machineId: "rollerback", owner: 2, row: 3, col: 3, facing: "N" },
+]), 1);
+eq("preview warns about retaliation", retPreview.selfDamage, 1);
+
+eq("combat power reads off the board", combatPowerOf(pv, pv.pieces[0]), 3);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -2,6 +2,7 @@ export * from "./terrain";
 export * from "./corruption";
 export * from "./machines";
 export * from "./types";
+export * from "./skills";
 export * from "./combat";
 export * from "./movement";
 export * from "./targeting";

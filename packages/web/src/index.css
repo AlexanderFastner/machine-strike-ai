@@ -420,3 +420,102 @@ button.big { padding: 0.7rem 1.6rem; font-size: 1rem; border-radius: 10px; }
   font-size: 0.62rem; line-height: 1.05rem; color: #e9d5e4;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- game layout with the selected-piece card ---------- */
+
+.game-layout {
+  display: grid;
+  grid-template-columns: 15.5rem auto 17rem;
+  gap: 1.25rem;
+  align-items: start;
+}
+.card-slot { width: 15.5rem; }
+
+.card-panel {
+  display: flex; flex-direction: column; gap: 0.7rem;
+  padding: 0.9rem; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 10px;
+  position: sticky; top: 1.5rem;
+}
+.card-head { display: flex; align-items: center; gap: 0.6rem; }
+.card-head img { width: 44px; height: 44px; image-rendering: pixelated; flex: none; }
+.card-head div { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.card-head b { font-size: 1rem; font-weight: 650; }
+.card-head span { font-size: 0.7rem; color: var(--muted); }
+
+.hp-bar {
+  position: relative; height: 1.2rem; border-radius: 999px; overflow: hidden;
+  background: #151b23; border: 1px solid var(--line);
+}
+.hp-fill { position: absolute; inset: 0 auto 0 0; background: #3f7d52; transition: width 150ms ease; }
+.hp-bar span {
+  position: relative; display: block; text-align: center;
+  font-size: 0.68rem; line-height: 1.2rem; font-variant-numeric: tabular-nums;
+}
+
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin: 0; }
+.stat-grid > div {
+  background: #151b23; border-radius: 6px; padding: 0.35rem 0.45rem;
+  display: flex; flex-direction: column; gap: 0.1rem;
+}
+.stat-grid dt { font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.stat-grid dd { margin: 0; font-size: 0.95rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.stat-grid .highlight { grid-column: 1 / -1; background: color-mix(in srgb, var(--accent) 12%, #151b23); }
+.stat-grid .highlight dd { color: var(--accent); }
+
+.card-row { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.75rem; }
+.card-row .k { color: var(--muted); }
+.card-row .v em { font-style: normal; color: var(--muted); }
+
+.sides { display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; }
+.sides .k { color: var(--muted); }
+.side-chips { display: flex; gap: 0.25rem; }
+.chip {
+  width: 1.35rem; height: 1.35rem; border-radius: 5px;
+  display: grid; place-items: center; font-size: 0.68rem; font-weight: 700;
+}
+.chip.armor { background: #2f6fd0; color: #fff; }
+.chip.weak { background: #d63d3d; color: #fff; }
+.chip.neutral { background: #49535e; color: #cbd3da; }
+
+.skill-box {
+  display: flex; flex-direction: column; gap: 0.15rem;
+  padding: 0.5rem; border-radius: 7px;
+  background: color-mix(in srgb, #8fb8e0 12%, transparent);
+  border: 1px solid color-mix(in srgb, #8fb8e0 25%, transparent);
+}
+.skill-box b { font-size: 0.78rem; color: #8fb8e0; }
+.skill-box span { font-size: 0.7rem; color: var(--muted); line-height: 1.45; }
+
+/* ---------- board badges ---------- */
+
+.tile .power {
+  position: absolute; left: 2px; bottom: 1px;
+  font-size: 0.62rem; font-weight: 700; line-height: 1;
+  padding: 1px 3px; border-radius: 3px;
+  background: rgba(8, 11, 15, 0.85); color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.tile .dmg {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font-size: 1.3rem; font-weight: 800;
+  color: #ff5d5d; text-shadow: 0 0 4px #000, 0 1px 2px #000;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+.tile .dmg.lethal { color: #fff; background: rgba(190, 40, 40, 0.45); }
+
+/* ---------- richer target box ---------- */
+
+.hit-line { display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline; }
+.hit-line .kill { color: #ff7a7a; font-weight: 650; }
+.hit-line .self { color: #ffb35c; }
+.hit-line em { font-style: normal; font-size: 0.66rem; color: var(--muted); }
+
+kbd {
+  padding: 0.05rem 0.3rem; border-radius: 4px;
+  background: #151b23; border: 1px solid var(--line);
+  font: inherit; font-size: 0.68rem;
+}

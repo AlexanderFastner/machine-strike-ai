@@ -1,5 +1,12 @@
-import { resolveAttack } from "./combat";
+import { attackerCP, resolveAttack } from "./combat";
 import { blightDone, corruptedTiles, nextTileFor } from "./corruption";
+import {
+  CONVERSION,
+  attackPowerMod,
+  dist,
+  facingToward,
+  stepTerrain,
+} from "./skills";
 import { MACHINE_BY_ID } from "./machines";
 import { reachable } from "./movement";
 import { targetOf } from "./targeting";
@@ -12,6 +19,7 @@ import {
   VP_TO_WIN,
   at,
   inBounds,
+  opposite,
   other,
   type Facing,
   type GameState,
@@ -60,6 +68,8 @@ const clone = (s: GameState): GameState => ({
   activated: [...s.activated],
   vp: { ...s.vp },
   log: [...s.log],
+  // Terrain is mutable — several skills change it — so the grid is copied too.
+  grid: s.grid.map((row) => [...row]),
   corruption: { ...s.corruption, fronts: { ...s.corruption.fronts } },
 });
 
@@ -130,6 +140,36 @@ function knockback(s: GameState, victim: Piece, dir: Facing, attacker: Piece) {
   if (victim.hp <= 0) kill(s, victim, attacker.owner);
 }
 
+/** Terrain conversion and Alter Terrain, both after damage lands (rules 10.2, 10.3). */
+function applyOnHitSkills(s: GameState, attacker: Piece, victim: Piece, victimCorrupted: boolean) {
+  const m = MACHINE_BY_ID[attacker.machineId];
+  if (!m.skill) return;
+
+  const conv = CONVERSION[m.skill];
+  if (conv && !victimCorrupted && s.grid[victim.row][victim.col] === conv.from) {
+    s.grid[victim.row][victim.col] = conv.to;
+    s.log.push(`${m.skill}: ${victim.row},${victim.col} becomes ${conv.to}.`);
+  }
+
+  if (m.skill === "Alter Terrain") {
+    // Lowers the attacker's own tile, raises the target's. Deliberately double-edged.
+    s.grid[attacker.row][attacker.col] = stepTerrain(s.grid[attacker.row][attacker.col], -1);
+    s.grid[victim.row][victim.col] = stepTerrain(s.grid[victim.row][victim.col], +1);
+    s.log.push("Alter Terrain reshapes the ground.");
+  }
+}
+
+/** Retaliate: turn to face the attacker and hit back for 1, if it is in range. */
+function retaliate(s: GameState, attacker: Piece, victim: Piece) {
+  const vm = MACHINE_BY_ID[victim.machineId];
+  if (vm.skill !== "Retaliate") return;
+  victim.facing = facingToward(victim, attacker);
+  if (dist(victim, attacker) > vm.range) return;
+  attacker.hp -= 1;
+  s.log.push(`${name(victim)} retaliates for 1.`);
+  if (attacker.hp <= 0) kill(s, attacker, victim.owner);
+}
+
 export function attackWith(s0: GameState, uid: number): GameState {
   const s = clone(s0);
   const attacker = s.pieces.find((x) => x.uid === uid)!;
@@ -140,7 +180,7 @@ export function attackWith(s0: GameState, uid: number): GameState {
   const blighted = corrupted(s);
   const terrainAt = (p: Piece) => s.grid[p.row][p.col];
   const blightedAt = (p: Piece) => blighted.has(`${p.row},${p.col}`);
-  const victims = target.kind === "lane" ? target.victims : [target.victim];
+  const victims = target.kind === "single" ? [target.victim] : target.victims;
 
   for (const v0 of victims) {
     const victim = s.pieces.find((x) => x.uid === v0.uid);
@@ -153,6 +193,7 @@ export function attackWith(s0: GameState, uid: number): GameState {
       target.dir,
       blightedAt(attacker),
       blightedAt(victim),
+      attackPowerMod(s, attacker),
     );
 
     if (res.kind === "damage") {
@@ -161,7 +202,9 @@ export function attackWith(s0: GameState, uid: number): GameState {
         `${name(attacker)} hits ${name(victim)} on its ${res.sideHit} side ` +
           `(CP ${res.attackerCP} vs ${res.defenderCP}) for ${res.damage}.`,
       );
+      applyOnHitSkills(s, attacker, victim, blightedAt(victim));
       if (victim.hp <= 0) kill(s, victim, attacker.owner);
+      else retaliate(s, attacker, victim);
     } else {
       // Defense Break: both lose 1 and the defender is knocked back (rules 6.3).
       attacker.hp -= 1;
@@ -242,6 +285,7 @@ export function endTurn(s0: GameState): GameState {
  * always gets one turn to walk out.
  */
 function startOfTurn(s: GameState) {
+  startOfTurnSkills(s);
   if (!s.corruption.enabled) {
     if (s.round > ROUND_LIMIT) endOnTime(s);
     return;
@@ -268,6 +312,31 @@ function startOfTurn(s: GameState) {
   if (blightDone(s.grid.length, s.corruption) && !s.winner) endOnTime(s);
 }
 
+/**
+ * Spray and Whiplash fire at the start of their owner's turn (rules 10.4).
+ * Both are indiscriminate: "all pieces within Attack Range", the owner's own
+ * machines included.
+ */
+function startOfTurnSkills(s: GameState) {
+  for (const src of [...s.pieces]) {
+    if (src.owner !== s.turn) continue;
+    const sm = MACHINE_BY_ID[src.machineId];
+    if (sm.skill !== "Spray" && sm.skill !== "Whiplash") continue;
+
+    for (const p of [...s.pieces]) {
+      if (p.uid === src.uid || dist(src, p) > sm.range) continue;
+      if (sm.skill === "Spray") {
+        p.hp -= 1;
+        s.log.push(`${name(src)} sprays ${name(p)} (-1).`);
+        if (p.hp <= 0) kill(s, p, other(p.owner));
+      } else {
+        p.facing = opposite(p.facing);
+        s.log.push(`${name(src)} whips ${name(p)} around.`);
+      }
+    }
+  }
+}
+
 /** Nobody reached 7 VP: highest total wins, equal is a draw. */
 function endOnTime(s: GameState) {
   s.winner = s.vp[1] > s.vp[2] ? 1 : s.vp[2] > s.vp[1] ? 2 : "draw";
@@ -275,6 +344,68 @@ function endOnTime(s: GameState) {
     s.winner === "draw"
       ? "The board is consumed — level on victory points, a draw."
       : `The board is consumed — Player ${s.winner} wins on victory points.`,
+  );
+}
+
+/** What an attack would do, without applying it — for the UI's damage preview. */
+export type AttackPreview = {
+  hits: { uid: number; damage: number; lethal: boolean; sideHit: string; defenseBreak: boolean }[];
+  /** Damage the attacker would take: Defense Break and Retaliate. */
+  selfDamage: number;
+  selfLethal: boolean;
+};
+
+export function previewAttack(s: GameState, uid: number): AttackPreview | null {
+  const attacker = s.pieces.find((x) => x.uid === uid);
+  if (!attacker) return null;
+  const target = targetOf(s, attacker);
+  if (target.kind === "none") return null;
+
+  const blighted = corrupted(s);
+  const isBlighted = (p: Piece) => blighted.has(`${p.row},${p.col}`);
+  const powerMod = attackPowerMod(s, attacker);
+  const victims = target.kind === "single" ? [target.victim] : target.victims;
+
+  let selfDamage = 0;
+  const hits = victims.map((victim) => {
+    const res = resolveAttack(
+      attacker,
+      victim,
+      s.grid[attacker.row][attacker.col],
+      s.grid[victim.row][victim.col],
+      target.dir,
+      isBlighted(attacker),
+      isBlighted(victim),
+      powerMod,
+    );
+    const damage = res.kind === "damage" ? res.damage : 1;
+    const lethal = victim.hp - damage <= 0;
+
+    if (res.kind === "defenseBreak") selfDamage += 1;
+    // Retaliate only fires if the target survives to swing back.
+    const vm = MACHINE_BY_ID[victim.machineId];
+    if (!lethal && vm.skill === "Retaliate" && dist(victim, attacker) <= vm.range) selfDamage += 1;
+
+    return {
+      uid: victim.uid,
+      damage,
+      lethal,
+      sideHit: res.sideHit,
+      defenseBreak: res.kind === "defenseBreak",
+    };
+  });
+
+  return { hits, selfDamage, selfLethal: attacker.hp - selfDamage <= 0 };
+}
+
+/** Combat Power this piece would attack at from where it stands. */
+export function combatPowerOf(s: GameState, piece: Piece): number {
+  const m = MACHINE_BY_ID[piece.machineId];
+  return attackerCP(
+    m,
+    s.grid[piece.row][piece.col],
+    corrupted(s).has(`${piece.row},${piece.col}`),
+    attackPowerMod(s, piece),
   );
 }
 

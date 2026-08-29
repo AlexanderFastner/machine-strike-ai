@@ -1,18 +1,26 @@
 import { MACHINE_BY_ID, type Machine, type Side } from "./machines";
 import { CORRUPTION_MOD, TERRAIN_MOD, type TerrainId } from "./terrain";
 import { FACINGS, opposite, type Facing, type Piece } from "./types";
+import { shieldBonus, terrainSkillBonus } from "./skills";
 
 /**
  * Attacker Combat Power = attack + terrain.
  * Swoop ignores terrain penalties and gains +1 everywhere (rules 6.1).
  * Pull gains +1 while standing on marsh.
  */
-export function attackerCP(m: Machine, terrain: TerrainId, isCorrupted = false): number {
-  if (isCorrupted) return m.attack + CORRUPTION_MOD;
+export function attackerCP(
+  m: Machine,
+  terrain: TerrainId,
+  isCorrupted = false,
+  powerMod = 0,
+): number {
+  const attack = m.attack + powerMod; // Empower / Blind
+  const skill = terrainSkillBonus(m, terrain, isCorrupted);
+  if (isCorrupted) return attack + CORRUPTION_MOD + skill;
   const t = TERRAIN_MOD[terrain];
-  if (m.type === "Swoop") return m.attack + Math.max(0, t) + 1;
-  if (m.type === "Pull" && terrain === "marsh") return m.attack + t + 1;
-  return m.attack + t;
+  if (m.type === "Swoop") return attack + Math.max(0, t) + 1 + skill;
+  if (m.type === "Pull" && terrain === "marsh") return attack + t + 1 + skill;
+  return attack + t + skill;
 }
 
 /**
@@ -31,7 +39,7 @@ export function defenderCP(
       ? Math.max(0, TERRAIN_MOD[terrain]) + 1
       : TERRAIN_MOD[terrain];
   const facing = m.armor.includes(sideHit) ? +1 : m.weak.includes(sideHit) ? -1 : 0;
-  return t + facing;
+  return t + facing + shieldBonus(m);
 }
 
 /**
@@ -60,11 +68,12 @@ export function resolveAttack(
   attackDir: Facing,
   attackerCorrupted = false,
   defenderCorrupted = false,
+  attackerPowerMod = 0,
 ): Resolution {
   const am = MACHINE_BY_ID[attacker.machineId];
   const dm = MACHINE_BY_ID[defender.machineId];
   const sideHit = sideHitBy(defender.facing, attackDir);
-  const aCP = attackerCP(am, attackerTerrain, attackerCorrupted);
+  const aCP = attackerCP(am, attackerTerrain, attackerCorrupted, attackerPowerMod);
   const dCP = defenderCP(dm, defenderTerrain, sideHit, defenderCorrupted);
 
   return aCP > dCP

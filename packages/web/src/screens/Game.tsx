@@ -1,15 +1,19 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Board } from "../board/Board";
-import { parseBoard, TERRAIN, type BoardFile } from "../board/terrain";
+import { parseBoard, type BoardFile } from "../board/terrain";
 import { SPRITE } from "../data/machines";
+import { PieceCard } from "./PieceCard";
 import {
   FACINGS,
   MACHINE_BY_ID,
   ROUND_LIMIT,
   activatablePieces,
   attackWith,
+  FACINGS as ALL_FACINGS,
   blightTotal,
+  combatPowerOf,
   corrupted,
+  previewAttack,
   endActivation,
   endTurn,
   key,
@@ -45,6 +49,29 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
 
   const moves = selected && !hasMoved ? movesFor(state, selected) : new Map<string, number>();
   const target = selected ? targetOf(state, selected) : null;
+
+  // Predicted outcome of the attack currently lined up, shown on the board.
+  const preview = selected ? previewAttack(state, selected.uid) : null;
+  const previewByUid = useMemo(() => {
+    const map = new Map<number, { damage: number; lethal: boolean }>();
+    if (!preview || !selected) return map;
+    for (const h of preview.hits) map.set(h.uid, { damage: h.damage, lethal: h.lethal });
+    if (preview.selfDamage > 0)
+      map.set(selected.uid, { damage: preview.selfDamage, lethal: preview.selfLethal });
+    return map;
+  }, [preview, selected]);
+
+  // E rotates the selected machine a quarter turn clockwise.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "e" && e.key !== "E") return;
+      if (!selected || state.winner) return;
+      const next = ALL_FACINGS[(ALL_FACINGS.indexOf(selected.facing) + 1) % 4];
+      setState((s) => rotatePiece(s, selected.uid, next));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selected, state.winner]);
 
   function selectPiece(uid: number) {
     if (!selectable.has(uid)) return;
@@ -89,7 +116,6 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
   const mustAct = canAct.length > 0 && state.activationsLeft > 0;
 
   const machine = selected && MACHINE_BY_ID[selected.machineId];
-  const terrain = selected && TERRAIN[grid[selected.row][selected.col]];
 
   return (
     <div className="screen wide">
@@ -115,12 +141,16 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
         <Score state={state} owner={2} />
       </div>
 
-      <div className="deploy">
+      <div className="game-layout">
+        {selected ? <PieceCard state={state} piece={selected} /> : <div className="card-slot" />}
+
         <Board
           grid={grid}
           scale={64}
           pieces={state.pieces}
           corrupted={blight}
+          powerOf={(p) => combatPowerOf(state, p as never)}
+          preview={previewByUid}
           selectedUid={selectedUid ?? undefined}
           highlight={(r, c) => moves.has(key(r, c))}
           onTileClick={clickTile}
@@ -160,13 +190,7 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
             </>
           ) : (
             <>
-              <h3 className="tray-title">
-                {machine!.name} · {selected.hp}/{machine!.health} hp
-              </h3>
-              <p className="turn-note">
-                {machine!.type} · on {terrain!.name} ({terrain!.modifier >= 0 ? "+" : ""}
-                {terrain!.modifier}) · CP {machine!.attack + terrain!.modifier}
-              </p>
+              <h3 className="tray-title">{machine!.name}</h3>
 
               <div className="facing-row">
                 <span className="label">Facing</span>
@@ -182,15 +206,35 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
               </div>
 
               <div className="target-box">
-                {target && target.kind !== "none" ? (
-                  <span className="hit">
-                    Target:{" "}
-                    {target.kind === "single"
-                      ? MACHINE_BY_ID[target.victim.machineId].name
-                      : `${target.victims.length} in the lane`}
-                  </span>
+                {target && target.kind !== "none" && preview ? (
+                  <>
+                    {preview.hits.map((h) => {
+                      const v = state.pieces.find((p) => p.uid === h.uid);
+                      return (
+                        <div key={h.uid} className="hit-line">
+                          <span className={h.lethal ? "kill" : "hit"}>
+                            {v ? MACHINE_BY_ID[v.machineId].name : "?"} −{h.damage}
+                            {h.lethal ? " (destroyed)" : ""}
+                          </span>
+                          <em>
+                            {h.defenseBreak ? "defense break" : `${h.sideHit} side`}
+                          </em>
+                        </div>
+                      );
+                    })}
+                    {preview.selfDamage > 0 && (
+                      <div className="hit-line">
+                        <span className="self">
+                          You take −{preview.selfDamage}
+                          {preview.selfLethal ? " (destroyed)" : ""}
+                        </span>
+                      </div>
+                    )}
+                  </>
                 ) : (
-                  <span className="miss">{target?.reason ?? "No target"}</span>
+                  <span className="miss">
+                    {target && target.kind === "none" ? target.reason : "No target"}
+                  </span>
                 )}
               </div>
 
@@ -215,7 +259,8 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
                 </button>
               </div>
               <p className="rule-note">
-                Rotation is free until you attack. Moving then attacking ends the activation.
+                Press <kbd>E</kbd> to turn a quarter clockwise. Rotation is free until you attack;
+                moving then attacking ends the activation.
               </p>
             </>
           )}
