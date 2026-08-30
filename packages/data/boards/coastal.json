@@ -1,0 +1,23 @@
+{
+  "id": "coastal",
+  "name": "Coastal",
+  "description": "Marsh sweeps in from opposite corners. Pull machines are at home here \u2014 they wade through unhindered and fight at +1.",
+  "legend": {
+    "C": "chasm",
+    "W": "marsh",
+    "G": "grassland",
+    "F": "forest",
+    "H": "hill",
+    "M": "mountain"
+  },
+  "rows": [
+    "WGGGGGGG",
+    "WWGGGGGG",
+    "WGGGFGGG",
+    "GGGFGGGG",
+    "GGGGFGGG",
+    "GGGFGGGW",
+    "GGGGGGWW",
+    "GGGGGGGW"
+  ]
+}

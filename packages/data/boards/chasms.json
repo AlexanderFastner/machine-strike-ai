@@ -1,0 +1,23 @@
+{
+  "id": "chasms",
+  "name": "Chasms",
+  "description": "Torn ground. Only Swoop machines can cross a chasm, so everything else must go the long way round \u2014 and shoving a piece in is free.",
+  "legend": {
+    "C": "chasm",
+    "W": "marsh",
+    "G": "grassland",
+    "F": "forest",
+    "H": "hill",
+    "M": "mountain"
+  },
+  "rows": [
+    "GGGGGGGG",
+    "GGGGGGGG",
+    "GGCCGGGG",
+    "GCCGGCGG",
+    "GGCGGCCG",
+    "GGGGCCGG",
+    "GGGGGGGG",
+    "GGGGGGGG"
+  ]
+}

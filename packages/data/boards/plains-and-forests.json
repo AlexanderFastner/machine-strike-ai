@@ -1,0 +1,23 @@
+{
+  "id": "plains-and-forests",
+  "name": "Plains and Forests",
+  "description": "Open ground broken by stands of forest. Gentle: a little cover, nowhere to hide, and no terrain that stops a machine.",
+  "legend": {
+    "C": "chasm",
+    "W": "marsh",
+    "G": "grassland",
+    "F": "forest",
+    "H": "hill",
+    "M": "mountain"
+  },
+  "rows": [
+    "GGGGGGGG",
+    "GGFFGGGG",
+    "GFFGGFGG",
+    "GGGFFGGG",
+    "GGGFFGGG",
+    "GGFGGFFG",
+    "GGGGFFGG",
+    "GGGGGGGG"
+  ]
+}

@@ -3,6 +3,7 @@ import { Board } from "../board/Board";
 import { parseBoard, type BoardFile } from "../board/terrain";
 import { SPRITE } from "../data/machines";
 import { PieceCard } from "./PieceCard";
+import { saveGame } from "../data/saves";
 import {
   FACINGS,
   MACHINE_BY_ID,
@@ -36,13 +37,41 @@ type Props = {
   board: BoardFile;
   corruption: boolean;
   deployments: Deployment[];
+  /** Resume a saved game instead of starting from the deployment. */
+  initialState?: GameState;
   onQuit: () => void;
 };
 
-export function Game({ board, corruption, deployments, onQuit }: Props) {
+export function Game({ board, corruption, deployments, initialState, onQuit }: Props) {
   // Only the *starting* grid; terrain is mutable, so everything else reads state.grid.
   const startGrid = useMemo(() => parseBoard(board), [board]);
-  const [state, setState] = useState<GameState>(() => newGame(startGrid, deployments, corruption));
+  const [state, setStateRaw] = useState<GameState>(
+    () => initialState ?? newGame(startGrid, deployments, corruption),
+  );
+  /**
+   * Undo is free because every engine transition returns a new state and never
+   * mutates the old one — the history is just the states we have already seen.
+   */
+  const [history, setHistory] = useState<GameState[]>([]);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const setState = (next: GameState) => {
+    setHistory((h) => [...h.slice(-49), state]);
+    setStateRaw(next);
+  };
+
+  function undo() {
+    if (history.length === 0) return;
+    setStateRaw(history[history.length - 1]);
+    setHistory((h) => h.slice(0, -1));
+    clearActivation();
+  }
+
+  function save() {
+    const ok = saveGame(board, corruption, state);
+    setToast(ok ? "Game saved" : "Could not save — storage unavailable");
+    setTimeout(() => setToast(null), 2200);
+  }
   const [selectedUid, setSelectedUid] = useState<number | null>(null);
   const [hasMoved, setHasMoved] = useState(false);
   /** A destination the player is considering but has not committed to. */
@@ -89,22 +118,29 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
   // E turns a quarter clockwise; F commits a proposed move; Escape drops it.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!selected || state.winner) return;
       const k = e.key.toLowerCase();
+      if (k === "u" || (k === "z" && (e.metaKey || e.ctrlKey))) {
+        e.preventDefault();
+        return undo();
+      }
+      if (!selected || state.winner) return;
       if (k === "e") {
         const next = ALL_FACINGS[(ALL_FACINGS.indexOf(selected.facing) + 1) % 4];
-        setState((s) => rotatePiece(s, selected.uid, next));
+        setState(rotatePiece(state, selected.uid, next));
       } else if (k === "f" && pending) {
         commitMove();
       } else if (k === "enter" && canEndActivation) {
         finishActivation();
+      } else if (k === "u" || (k === "z" && (e.metaKey || e.ctrlKey))) {
+        e.preventDefault();
+        undo();
       } else if (k === "escape") {
         setPending(null);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selected, pending, state.winner, proposed, overcharged, hasMoved]);
+  }, [selected, pending, state, proposed, overcharged, hasMoved, history]);
 
   function commitMove() {
     if (!selected || !pending) return;
@@ -375,7 +411,13 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
             </>
           )}
 
-          <div className="actions">
+          <div className="actions wrap">
+            <button onClick={undo} disabled={history.length === 0} title="Undo (U)">
+              Undo
+            </button>
+            <button onClick={save} title="Save this game">
+              Save
+            </button>
             <button onClick={onQuit}>Quit</button>
             {!state.winner && (
               <button
@@ -392,6 +434,8 @@ export function Game({ board, corruption, deployments, onQuit }: Props) {
           </div>
         </aside>
       </div>
+
+      {toast && <div className="toast">{toast}</div>}
 
       <ol className="log">
         {state.log.slice(-8).reverse().map((line, i) => (

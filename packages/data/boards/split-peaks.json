@@ -1,0 +1,23 @@
+{
+  "id": "split-peaks",
+  "name": "Split Peaks",
+  "description": "Two peaks either side of a marsh channel. The high ground is valuable and the crossing is slow: entering marsh ends your move.",
+  "legend": {
+    "C": "chasm",
+    "W": "marsh",
+    "G": "grassland",
+    "F": "forest",
+    "H": "hill",
+    "M": "mountain"
+  },
+  "rows": [
+    "GGGGGGGG",
+    "GHMHGGGG",
+    "GGHGGGGG",
+    "GGWWWWGG",
+    "GGWWWWGG",
+    "GGGGGHGG",
+    "GGGGHMHG",
+    "GGGGGGGG"
+  ]
+}

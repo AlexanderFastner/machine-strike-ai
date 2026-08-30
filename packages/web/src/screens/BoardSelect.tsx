@@ -1,29 +1,44 @@
 import { useState } from "react";
-import flat from "@data/boards/flat.json";
 import { Board } from "../board/Board";
 import { parseBoard, type BoardFile } from "../board/terrain";
+import { allBoards, deleteCustomBoard, isCustom } from "../data/boards";
 
-const BOARDS: BoardFile[] = [flat as BoardFile];
+type Props = {
+  onPick: (board: BoardFile, corruption: boolean) => void;
+  onEdit: () => void;
+  onBack: () => void;
+};
 
-type Props = { onPick: (board: BoardFile, corruption: boolean) => void; onBack: () => void };
-
-export function BoardSelect({ onPick, onBack }: Props) {
+export function BoardSelect({ onPick, onEdit, onBack }: Props) {
   const [corruption, setCorruption] = useState(true);
+  const [boards, setBoards] = useState<BoardFile[]>(() => allBoards());
+
+  function remove(id: string) {
+    deleteCustomBoard(id);
+    setBoards(allBoards());
+  }
 
   return (
-    <div className="screen">
+    <div className="screen wide">
       <Steps active={1} />
       <h2 className="screen-title">Choose a board</h2>
 
-      <div className="board-choices">
-        {BOARDS.map((b) => (
-          <button key={b.id} className="board-choice" onClick={() => onPick(b, corruption)}>
-            <Board grid={parseBoard(b)} scale={32} />
-            <div className="choice-text">
-              <b>{b.name}</b>
-              <span>{b.description}</span>
-            </div>
-          </button>
+      <div className="board-grid">
+        {boards.map((b) => (
+          <div key={b.id} className="board-tile">
+            <button className="board-choice" onClick={() => onPick(b, corruption)}>
+              <Board grid={parseBoard(b)} scale={32} />
+              <div className="choice-text">
+                <b>{b.name}</b>
+                <span>{b.description}</span>
+              </div>
+            </button>
+            {isCustom(b.id) && (
+              <button className="remove-board" onClick={() => remove(b.id)} title="Delete this board">
+                ×
+              </button>
+            )}
+          </div>
         ))}
       </div>
 
@@ -43,13 +58,9 @@ export function BoardSelect({ onPick, onBack }: Props) {
         </span>
       </label>
 
-      <p className="footnote">
-        More boards, and a symmetric random generator, come later — the board format is already a plain
-        terrain grid, so adding them needs no format change.
-      </p>
-
       <div className="actions">
         <button onClick={onBack}>Back</button>
+        <button onClick={onEdit}>Make a board</button>
       </div>
     </div>
   );

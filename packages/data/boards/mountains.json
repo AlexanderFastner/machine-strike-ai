@@ -1,0 +1,23 @@
+{
+  "id": "mountains",
+  "name": "Mountains",
+  "description": "A high ridge across the middle. Whoever holds the peaks attacks at +3 and defends at +3 \u2014 this board is decided by who climbs first.",
+  "legend": {
+    "C": "chasm",
+    "W": "marsh",
+    "G": "grassland",
+    "F": "forest",
+    "H": "hill",
+    "M": "mountain"
+  },
+  "rows": [
+    "GGGGGGGG",
+    "GGGHGGGG",
+    "GGHMMHGG",
+    "GHMHHMHG",
+    "GHMHHMHG",
+    "GGHMMHGG",
+    "GGGGHGGG",
+    "GGGGGGGG"
+  ]
+}

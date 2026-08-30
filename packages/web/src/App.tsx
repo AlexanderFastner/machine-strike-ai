@@ -5,23 +5,51 @@ import { Draft } from "./screens/Draft";
 import { Handoff } from "./screens/Handoff";
 import { Deploy, type DeployPiece } from "./screens/Deploy";
 import { Game } from "./screens/Game";
+import { MapEditor } from "./screens/MapEditor";
+import { loadGame } from "./data/saves";
 import type { BoardFile } from "./board/terrain";
-import type { Deployment, Owner, Team } from "./data/machines";
+import type { Deployment, GameState, Owner, Team } from "./data/machines";
 
 type Screen =
   | { at: "landing" }
   | { at: "board" }
+  | { at: "editor" }
   | { at: "draft"; board: BoardFile; corruption: boolean; player: Owner; teams: Partial<Record<Owner, Team>> }
   | { at: "handoff"; board: BoardFile; corruption: boolean; teams: Partial<Record<Owner, Team>> }
   | { at: "deploy"; board: BoardFile; corruption: boolean; teams: Record<Owner, Team> }
-  | { at: "game"; board: BoardFile; corruption: boolean; deployments: Deployment[] };
+  | {
+      at: "game";
+      board: BoardFile;
+      corruption: boolean;
+      deployments: Deployment[];
+      resume?: GameState;
+    };
 
 export function App() {
   const [screen, setScreen] = useState<Screen>({ at: "landing" });
 
   switch (screen.at) {
     case "landing":
-      return <Landing onPlay={() => setScreen({ at: "board" })} />;
+      return (
+        <Landing
+          onPlay={() => setScreen({ at: "board" })}
+          onEdit={() => setScreen({ at: "editor" })}
+          onContinue={() => {
+            const save = loadGame();
+            if (save)
+              setScreen({
+                at: "game",
+                board: save.board,
+                corruption: save.corruption,
+                deployments: [],
+                resume: save.state,
+              });
+          }}
+        />
+      );
+
+    case "editor":
+      return <MapEditor onDone={() => setScreen({ at: "board" })} />;
 
     case "board":
       return (
@@ -29,6 +57,7 @@ export function App() {
           onPick={(board, corruption) =>
             setScreen({ at: "draft", board, corruption, player: 1, teams: {} })
           }
+          onEdit={() => setScreen({ at: "editor" })}
           onBack={() => setScreen({ at: "landing" })}
         />
       );
@@ -98,6 +127,7 @@ export function App() {
           board={screen.board}
           corruption={screen.corruption}
           deployments={screen.deployments}
+          initialState={screen.resume}
           onQuit={() => setScreen({ at: "landing" })}
         />
       );
