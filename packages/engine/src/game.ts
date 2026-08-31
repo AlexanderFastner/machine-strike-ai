@@ -251,9 +251,17 @@ export function attackWith(s0: GameState, uid: number): GameState {
       }
     }
   } else if (target.kind === "lane") {
-    attacker.row = target.landing.row;
-    attacker.col = target.landing.col;
-    s.log.push(`${name(attacker)} charges through and lands beyond.`);
+    // The landing tile was empty when the charge was declared, but resolution can
+    // fill it: a Defense Break in the lane knocks that defender backwards, and
+    // backwards is where the charge was going. Re-check before landing, or two
+    // machines end up on one tile.
+    if (!at(s, target.landing.row, target.landing.col)) {
+      attacker.row = target.landing.row;
+      attacker.col = target.landing.col;
+      s.log.push(`${name(attacker)} charges through and lands beyond.`);
+    } else {
+      s.log.push(`${name(attacker)} is blocked and holds its ground.`);
+    }
   }
 
   if (!s.winner && s.pieces.every((p) => p.owner !== other(attacker.owner)))

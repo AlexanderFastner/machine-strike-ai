@@ -5,7 +5,11 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "test": "tsx test/golden.ts"
+    "test": "npm run test:golden && npm run test:perft && npm run test:fuzz",
+    "test:golden": "tsx test/golden.ts",
+    "test:perft": "tsx test/perft.ts",
+    "test:fuzz": "tsx test/fuzz.ts",
+    "test:fuzz:deep": "FUZZ_GAMES=5000 tsx test/fuzz.ts"
   },
   "devDependencies": {
     "tsx": "^4.23.12"

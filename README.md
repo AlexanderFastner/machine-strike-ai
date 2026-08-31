@@ -33,7 +33,8 @@ See **[plan.md](plan.md)** for the full two-stage plan.
 | Sprint, overcharge, two activations, victory points, win conditions | Random symmetric map generator |
 | Six boards, a map editor, undo, and save/load | |
 
-123 engine tests, run with `npm test`.
+**Testing:** 123 golden assertions, 11 frozen perft counts, and 400 seeded fuzz games per run — all under
+`npm test`. What each suite checks is tracked in [docs/testing.md](docs/testing.md).
 
 ## Running it
 
@@ -47,11 +48,15 @@ npm test
 ```
 
 ```bash
+npm run test:fuzz:deep
+```
+
+```bash
 npm run deploy
 ```
 
-`dev` serves on :5173, `test` runs the engine's golden tests, `deploy` typechecks, builds and ships to Firebase
-Hosting.
+`dev` serves on :5173, `test` runs the three engine suites, `test:fuzz:deep` runs 5000 random games instead of
+400, and `deploy` typechecks, builds and ships to Firebase Hosting.
 
 ## How to play
 
@@ -111,6 +116,8 @@ docs/             rules spec, piece stats
   mistaken for a real one.
 - **[docs/pieces.md](docs/pieces.md)** — all 43 machines with stats, armour/weak facings, points and skills.
   Generated from `packages/data/machines.json`; edit the JSON and rerun `tools/gen_pieces_table.py`.
+- **[docs/testing.md](docs/testing.md)** — what the engine tests check, as a maintained checklist, plus the
+  known gaps. Add a line here when you add a rule.
 - **[plan.md](plan.md)** — architecture and the road to the AI stage.
 
 ## Credits

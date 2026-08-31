@@ -229,12 +229,12 @@ Stage 2, unaffordable to retrofit:
 - Precompute static tables: terrain values, distance/ray tables, facing→armor lookup per machine.
 - Zobrist hashing over pieces **and mutable terrain** for transposition tables and repetition detection.
 
-> **Deviation, recorded deliberately.** The Stage 1 engine (`packages/engine`) is written for *clarity* — plain
-> objects and copy-on-write transitions — not for the speed target above. That is the right trade while the goal
-> is a correct, playable hot-seat game, and the golden tests pin the behaviour so a rewrite is safe. **But it
-> must be converted to typed arrays and make/unmake before Stage 2**, because self-play generation is the
-> bottleneck there and a copying engine will not sustain it. Treat this as a scheduled debt, not a decision
-> reversed.
+> **Deviation, recorded deliberately — and now measured.** The Stage 1 engine is written for *clarity*: plain
+> objects and copy-on-write transitions, not the typed-array target above. Perft now puts it at **~685,000
+> activations/sec**, which is fast enough that the conversion is **deferred rather than scheduled**: build the
+> arena first and let it show whether search or self-play actually needs more. Two things to know before doing
+> it — undo and save/load both lean on immutability, so a snapshot path has to survive the rewrite, and the
+> perft counts are the safety net that makes the rewrite checkable at all.
 
 **Purity.** No I/O, no randomness, no `Date.now()`. Randomness comes from an injected seeded PRNG. A game must
 replay bit-identically from `(seed, action list)`.
@@ -507,7 +507,7 @@ arena puzzle --suite tactics.msn --agent minimax:depth=6
 | Phase | Deliverable | Done when |
 |---|---|---|
 | **0. Rules** | ✅ **Done.** `docs/rules.md`, `docs/pieces.md`, roster data, placeholder art | No blocking questions remain |
-| **1. Engine** | `packages/engine` + tests | 🔄 Rules-complete for the hot-seat game: combat, movement, targeting, activations, knockback, corruption, all 15 skills, sprint and overcharge — 123 golden tests. Remaining: perft, fuzz, and the typed-array conversion before Stage 2 |
+| **1. Engine** | `packages/engine` + tests | ✅ **Done.** Rules-complete, with 123 golden assertions, 11 frozen perft counts and seeded fuzz. Perft measures **~685k activations/sec** — fast enough that the typed-array conversion is deferred until the arena proves it necessary. Coverage tracked in [docs/testing.md](docs/testing.md) |
 | **2. Hot-seat** | `packages/web` — draft, deploy, play, win | ✅ **Playable end to end.** Landing → board select (corruption toggle) → hidden two-player draft → alternating deployment → turn loop with combat, skills, blight, sprint and overcharge. Machine card, attack-range overlay, damage preview, proposed moves with keyboard confirm |
 | **3. Polish** | Undo, save/load, board library | ✅ **Done.** Threat and damage overlays, unlimited undo, save/continue, six symmetric boards, and a map editor with mirror-editing |
 
