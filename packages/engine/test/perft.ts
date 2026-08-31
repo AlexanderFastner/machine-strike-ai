@@ -34,7 +34,8 @@ const game = (deployments: Deployment[], corruption = false, rows?: string[]): G
 // ---------------------------------------------------------------------------
 
 /**
- * One Burrower alone in a corner: movement 2, range 1, nothing to attack.
+ * One Burrower alone on a1 — the bottom-left CORNER, so only two of the four
+ * cardinal directions are on the board. Movement 2, range 1, nothing to attack.
  * By hand: from a corner with sprint range 3 there are 9 reachable tiles
  * (2 at distance 1, 3 at 2, 4 at 3). Staying put is not an activation without
  * an attack, and there is nothing to attack, so it is 9 x 4 facings = 36.
@@ -83,9 +84,19 @@ const sprinter = game([{ machineId: "leaplasher", owner: 1, row: 4, col: 3, faci
 eq("sprinter perft(1)", perft(sprinter, 1), 200);
 
 /**
- * Terrain that stops movement shrinks the tree sharply.
- * By hand: both neighbours of the corner are marsh, and entering marsh ends
- * movement, so only those 2 tiles are reachable. 2 x 4 facings = 8.
+ * Terrain that stops movement shrinks the tree sharply. Two effects stack here,
+ * and it is worth separating them:
+ *
+ *       a      b      c
+ *   3   grass  grass  grass
+ *   2   marsh+ marsh  grass
+ *   1   grass* marsh+ grass      * = the Burrower   + = reachable
+ *
+ * a1 is a CORNER, so it has two neighbours rather than four. Both are marsh,
+ * and entering marsh ends movement, so movement 2 and sprint 3 buy nothing past
+ * them. b2 is marsh too, but that is not why it is unreachable: every route to
+ * it passes through a2 or b1, and both stop you on arrival.
+ * 2 reachable tiles x 4 facings = 8.
  */
 const marsh = game([{ machineId: "burrower", owner: 1, row: 7, col: 0, facing: "N" }], false, [
   "GGGGGGGG", "GGGGGGGG", "GGGGGGGG", "GGGGGGGG",
@@ -93,14 +104,14 @@ const marsh = game([{ machineId: "burrower", owner: 1, row: 7, col: 0, facing: "
 ]);
 eq("marsh perft(1)", perft(marsh, 1), 8);
 
-/** Chasms are impassable for everything but Swoop. */
+/** Chasms are impassable for everything but Swoop — here they wall the corner in. */
 const chasm = game([{ machineId: "burrower", owner: 1, row: 7, col: 0, facing: "N" }], false, [
   "GGGGGGGG", "GGGGGGGG", "GGGGGGGG", "GGGGGGGG",
   "GGGGGGGG", "GGGGGGGG", "CCGGGGGG", "GCGGGGGG",
 ]);
 eq("chasm walls a machine in", legalActivations(chasm).length, 0);
 
-/** A flyer ignores that wall entirely. */
+/** A Swoop machine in the same corner ignores that wall entirely. */
 const flyer = game([{ machineId: "glinthawk", owner: 1, row: 7, col: 0, facing: "N" }], false, [
   "GGGGGGGG", "GGGGGGGG", "GGGGGGGG", "GGGGGGGG",
   "GGGGGGGG", "GGGGGGGG", "CCGGGGGG", "GCGGGGGG",

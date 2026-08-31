@@ -138,19 +138,28 @@ test comments, so the frozen numbers are trustworthy rather than merely self-con
 derivation is only self-consistent: it will still fail loudly when a rule changes, but it cannot tell you
 whether it was right to begin with.
 
-- [x] `solo` — a lone machine in a corner: **36** — 9 reachable tiles (2 at distance 1, 3 at 2, 4 at 3) × 4 facings
-- [x] `duel` — two machines a tile apart: **87** at depth 1, **7221** at depth 2 — the enemy blocks one direction,
-      leaving 21 tiles × 4 = 84 move-only, plus 3 attacking positions (stay put facing it, or step to either flank)
-- [x] `gunner` — the same position with a Gunner: **87** — the same 21 tiles × 4 = 84, plus 3 tiles sitting exactly
-      two away along a ray; one within normal movement, two only by sprinting, which needs an overcharge to keep
-      the attack. The matching total is a coincidence of geometry, not a bug
-- [x] `sprinter` — the widest single-machine case, movement 4 sprinting to 5: **200** — distance rings of
-      4+8+12+14+12 = 50 destinations × 4 facings. The rings are clipped by the board edge, so they stop growing
+**Where each machine stands matters as much as the terrain**, so every position names its square. A corner has
+only two neighbours, not four — half the cardinal directions are off the board — which is doing as much work in
+the numbers below as the terrain is.
+
+- [x] `solo` — **Burrower on a1** (corner), open board: **36** — 9 reachable tiles (2 at distance 1, 3 at 2,
+      4 at 3, all clipped by the two board edges) × 4 facings
+- [x] `duel` — **Burrower on d4, enemy Burrower on d5**: **87** at depth 1, **7221** at depth 2 — the enemy
+      blocks one direction, leaving 21 tiles × 4 = 84 move-only, plus 3 attacking positions (stay on d4 facing
+      north, or step to either flank tile beside the target)
+- [x] `gunner` — **Scrapper on d4, enemy Burrower on d5**: **87** — the same 21 tiles × 4 = 84, plus 3 tiles
+      sitting exactly two away along a ray; one within normal movement, two only by sprinting, which needs an
+      overcharge to keep the attack. The matching total is a coincidence of geometry, not a bug
+- [x] `sprinter` — **Leaplasher on d4**, open board, movement 4 sprinting to 5: **200** — distance rings of
+      4+8+12+14+12 = 50 destinations × 4 facings. The rings are clipped by the board edges, so they stop growing
       at distance 4 and shrink at 5
-- [x] `marsh` — movement-stopping terrain: **8** — both neighbours are marsh and entering marsh ends movement,
-      so movement 2 and sprint 3 buy nothing: 2 reachable tiles × 4 facings
-- [x] `chasm` — a non-flyer walled in by chasms: 0 activations
-- [x] A flyer in the same position is not walled in
+- [x] `marsh` — **Burrower on a1** (corner) with marsh on a2, b1 and b2: **8** — two effects stack. The corner
+      leaves only two neighbours, and both are marsh, which ends movement on entry, so movement 2 and sprint 3
+      buy nothing beyond them: 2 reachable tiles × 4 facings. b2 is marsh as well, but that is not why it is
+      unreachable — every route to it passes through a2 or b1, and both stop you on arrival
+- [x] `chasm` — **Burrower on a1** (corner) with chasms on a2 and b1: **0 activations** — both neighbours are
+      illegal for a non-flyer, so it cannot move at all, and with nothing to attack it has no legal activation
+- [x] `flyer` — **Glinthawk on a1**, same chasms: not walled in, because Swoop may enter a chasm
 - [x] A player with no legal activation forfeits the turn instead of deadlocking
 
 Also recorded, not asserted: **~685,000 activations/sec**, which is the number that decides whether the engine
