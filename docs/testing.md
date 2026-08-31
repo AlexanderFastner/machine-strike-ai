@@ -121,21 +121,34 @@ Specific positions with hand-computed expected results, taken from [docs/rules.m
 
 Chess-style leaf counts: how many distinct sequences of N activations exist from a fixed position.
 
+**A perft node is a whole activation, not a square.** One node is a *(destination, facing, attack?)* triple, so
+every count below carries a ×4 multiplier for the four facings a machine may end its move in — rotation is free
+and unlimited during an activation (rules 4.3), and where a machine ends up facing decides what it threatens and
+which of its own sides it exposes. That is why these numbers look larger than "squares I could move to". Perft
+counts the *legal* action space, not the useful one; Stage 2 search will want to prune facings that change
+nothing, but a legality count must not.
+
 **The numbers mean nothing on their own.** Their value is that they move the moment any rule changes — so an
 edit that alters the action space without anyone intending it fails loudly. If a number changes, either you
 meant it (update the number, and say so in the commit message) or you have just introduced a bug.
 
 **They were derived from the implementation, not guessed** — my first attempt at predicting them was wrong on
-6 of 8. That makes hand-verification the safeguard: **every position below carries a written derivation** in the
+6 of 8. That makes hand-verification the safeguard: **every position below carries its derivation inline**, and again in the
 test comments, so the frozen numbers are trustworthy rather than merely self-consistent. A count without a
 derivation is only self-consistent: it will still fail loudly when a rule changes, but it cannot tell you
 whether it was right to begin with.
 
-- [x] `solo` — a lone machine in a corner: 36 *(hand-derived)*
-- [x] `duel` — two machines a tile apart: 87 at depth 1, 7221 at depth 2 *(depth 1 hand-derived)*
-- [x] `gunner` — the same position with a Gunner: 87 *(hand-derived; the matching total is a coincidence of geometry)*
-- [x] `sprinter` — the widest single-machine case, movement 4 sprinting to 5: 200 *(hand-derived: distance rings of 4+8+12+14+12 = 50 destinations x 4 facings; the rings are clipped by the board edge, so they stop growing at distance 4 and shrink at 5)*
-- [x] `marsh` — movement-stopping terrain: 8 *(hand-derived)*
+- [x] `solo` — a lone machine in a corner: **36** — 9 reachable tiles (2 at distance 1, 3 at 2, 4 at 3) × 4 facings
+- [x] `duel` — two machines a tile apart: **87** at depth 1, **7221** at depth 2 — the enemy blocks one direction,
+      leaving 21 tiles × 4 = 84 move-only, plus 3 attacking positions (stay put facing it, or step to either flank)
+- [x] `gunner` — the same position with a Gunner: **87** — the same 21 tiles × 4 = 84, plus 3 tiles sitting exactly
+      two away along a ray; one within normal movement, two only by sprinting, which needs an overcharge to keep
+      the attack. The matching total is a coincidence of geometry, not a bug
+- [x] `sprinter` — the widest single-machine case, movement 4 sprinting to 5: **200** — distance rings of
+      4+8+12+14+12 = 50 destinations × 4 facings. The rings are clipped by the board edge, so they stop growing
+      at distance 4 and shrink at 5
+- [x] `marsh` — movement-stopping terrain: **8** — both neighbours are marsh and entering marsh ends movement,
+      so movement 2 and sprint 3 buy nothing: 2 reachable tiles × 4 facings
 - [x] `chasm` — a non-flyer walled in by chasms: 0 activations
 - [x] A flyer in the same position is not walled in
 - [x] A player with no legal activation forfeits the turn instead of deadlocking
