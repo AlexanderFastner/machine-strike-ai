@@ -126,13 +126,15 @@ edit that alters the action space without anyone intending it fails loudly. If a
 meant it (update the number, and say so in the commit message) or you have just introduced a bug.
 
 **They were derived from the implementation, not guessed** — my first attempt at predicting them was wrong on
-6 of 8. That makes hand-verification the safeguard: four of the positions carry a written derivation in the
-comments, so the frozen numbers are trustworthy rather than merely self-consistent.
+6 of 8. That makes hand-verification the safeguard: **every position below carries a written derivation** in the
+test comments, so the frozen numbers are trustworthy rather than merely self-consistent. A count without a
+derivation is only self-consistent: it will still fail loudly when a rule changes, but it cannot tell you
+whether it was right to begin with.
 
 - [x] `solo` — a lone machine in a corner: 36 *(hand-derived)*
 - [x] `duel` — two machines a tile apart: 87 at depth 1, 7221 at depth 2 *(depth 1 hand-derived)*
 - [x] `gunner` — the same position with a Gunner: 87 *(hand-derived; the matching total is a coincidence of geometry)*
-- [x] `sprinter` — movement 4 plus sprint: 200
+- [x] `sprinter` — the widest single-machine case, movement 4 sprinting to 5: 200 *(hand-derived: distance rings of 4+8+12+14+12 = 50 destinations x 4 facings; the rings are clipped by the board edge, so they stop growing at distance 4 and shrink at 5)*
 - [x] `marsh` — movement-stopping terrain: 8 *(hand-derived)*
 - [x] `chasm` — a non-flyer walled in by chasms: 0 activations
 - [x] A flyer in the same position is not walled in

@@ -70,7 +70,15 @@ const gunner = game([
 ]);
 eq("gunner perft(1)", perft(gunner, 1), 87);
 
-/** Movement 4 plus sprint reaches far more ground — the tree grows fast. */
+/**
+ * The widest single-machine position in the set: a Leaplasher has movement 4,
+ * so it sprints 5.
+ * By hand: from d4 on an empty board the distance rings hold 4, 8, 12, 14 and
+ * 12 tiles = 50 destinations. Note the rings stop growing at distance 4 (14,
+ * not 16) and shrink at 5 (12, not 20) — the board edge clips them, since d4 is
+ * 4 rows from the top and 3 columns from the left. Alone, so no attacks, and
+ * standing still is not an activation: 50 x 4 facings = 200.
+ */
 const sprinter = game([{ machineId: "leaplasher", owner: 1, row: 4, col: 3, facing: "N" }]);
 eq("sprinter perft(1)", perft(sprinter, 1), 200);
 
