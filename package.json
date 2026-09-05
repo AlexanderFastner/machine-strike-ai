@@ -11,6 +11,7 @@
     "preview": "npm run preview -w @ms/web",
     "deploy": "npm run build && firebase deploy --only hosting",
     "test": "npm run test -w @ms/engine",
-    "test:fuzz:deep": "npm run test:fuzz:deep -w @ms/engine"
+    "test:fuzz:deep": "npm run test:fuzz:deep -w @ms/engine",
+    "arena": "tsx packages/arena/src/cli.ts"
   }
 }

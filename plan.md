@@ -201,7 +201,7 @@ machine-strike/
 │   ├── engine/                 # pure rules. zero dependencies. the foundation.
 │   ├── data/                   # machines.json + schema, board layouts
 │   ├── web/                    # React app (Stage 1 deliverable)
-│   ├── ai/                     # agents                                        (Stage 2)
+│   ├── ai/                     # agents + evaluation                           (Stage 2)
 │   └── arena/                  # headless runner, Elo, tournaments             (Stage 2)
 ├── assets/{terrain,pieces}/
 ├── tools/                      # data + asset generators
@@ -530,7 +530,7 @@ right; debugging an agent on an unproven engine is the expensive way to find rul
 
 | Phase | Deliverable | Done when |
 |---|---|---|
-| **4. Arena** | Headless runner, Random + Greedy, `AgentPlayer` in the UI | `arena match` produces Elo with error bars |
+| **4. Arena** | Headless runner, Random + Greedy, `AgentPlayer` in the UI | 🔄 **Arena done.** `npm run arena` runs matches and tournaments with paired games, a fixed draft book and Bradley–Terry Elo with error bars; five baseline agents ranked. See [docs/arena.md](docs/arena.md). Remaining: `AgentPlayer` in the UI |
 | **5. Search** | Alpha-beta + tuned eval | Beats Greedy >90%; you lose to it at depth 4 |
 | **6. MCTS** | UCT + variants | Ranked against alpha-beta at equal time budget |
 | **7. Neural** | Self-play loop, PyTorch, ONNX | A trained net beats the tuned alpha-beta |

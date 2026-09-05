@@ -1,0 +1,14 @@
+{
+  "name": "@ms/arena",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "arena": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@ms/engine": "*",
+    "@ms/ai": "*"
+  }
+}

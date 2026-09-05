@@ -25,13 +25,14 @@ See **[plan.md](plan.md)** for the full two-stage plan.
 
 | Working | Not yet |
 |---|---|
-| Landing → board select → hidden two-player draft → alternating deployment → play | AI opponents (Stage 2) |
+| Landing → board select → hidden two-player draft → alternating deployment → play | AI opponents in the UI |
 | Full combat: Combat Power, facing, Defense Break, knockback, collisions | Random symmetric map generator |
 | All six machine types, including derived targeting | Draft options (open/alternating/bans) |
 | All fifteen skills | |
 | Corruption — the blight, with a toggle for the 50-round alternative | Draft options (open/alternating/bans) |
 | Sprint, overcharge, two activations, victory points, win conditions | Random symmetric map generator |
-| Six boards, a map editor, undo, and save/load | |
+| Six boards, a map editor, undo, and save/load | Search and learned agents (Stage 2 rungs 2-4) |
+| **Headless arena** with five baseline agents and Elo ratings | |
 
 **Testing:** 123 golden assertions, 11 frozen perft counts, and 400 seeded fuzz games per run — all under
 `npm test`. What each suite checks is tracked in [docs/testing.md](docs/testing.md).
@@ -55,8 +56,12 @@ npm run test:fuzz:deep
 npm run deploy
 ```
 
+```bash
+npm run arena -- tournament --pairs 50
+```
+
 `dev` serves on :5173, `test` runs the three engine suites, `test:fuzz:deep` runs 5000 random games instead of
-400, and `deploy` typechecks, builds and ships to Firebase Hosting.
+400, `deploy` typechecks, builds and ships to Firebase Hosting, and `arena` runs headless agent matches.
 
 ## How to play
 
@@ -104,6 +109,8 @@ screen when a save exists.
 packages/engine   pure rules — no UI, no dependencies. The foundation.
 packages/data     machine roster, board files
 packages/web      Vite + React app
+packages/ai       agents and the evaluation function
+packages/arena    headless match runner, Elo, tournaments
 assets/           32×32 terrain tiles, generated placeholder piece sprites
 tools/            regenerators for the boards, the stat table and the sprites
 docs/             rules spec, piece stats
@@ -118,6 +125,8 @@ docs/             rules spec, piece stats
   Generated from `packages/data/machines.json`; edit the JSON and rerun `tools/gen_pieces_table.py`.
 - **[docs/testing.md](docs/testing.md)** — what the engine tests check, as a maintained checklist, plus the
   known gaps. Add a line here when you add a rule.
+- **[docs/arena.md](docs/arena.md)** — how agents are measured, the current Elo ladder, and what the arena has
+  surfaced about the game.
 - **[plan.md](plan.md)** — architecture and the road to the AI stage.
 
 ## Credits
