@@ -68,7 +68,8 @@ npm run arena -- tournament --pairs 50
 `dev` serves on :5173, `test` typechecks and then runs the engine and arena suites, `typecheck` runs just the
 type check, `test:fuzz:deep` runs 5000 random games instead of 400, `deploy` typechecks, builds and ships to
 Firebase Hosting, and `arena` runs headless agent matches. `tsx` runs TypeScript without checking its types, so
-`typecheck` is the only thing that catches a type error in the arena CLI, its tests or the experiments.
+`typecheck` is the only thing that catches a type error in the engine and arena tests, the arena CLI or the
+experiments.
 
 ## How to play
 

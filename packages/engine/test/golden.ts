@@ -1,8 +1,14 @@
 import { blockedReason, teamPoints, copiesOf, MACHINE_BY_ID, MAX_COPIES,
-         attackerCP, defenderCP, sideHitBy, resolveAttack } from "../src/index.ts";
+         attackerCP, defenderCP, sideHitBy } from "../src/index.ts";
+import type { Machine, Piece, Side, TerrainId } from "../src/index.ts";
+
+// Most calls below read only the handful of fields they need, so the fixtures
+// are partial. These two say "stands in for one" once, instead of at every call.
+const machine = (m: Partial<Machine>) => m as Machine;
+const piece = (p: Partial<Piece>) => p as Piece;
 
 let pass = 0, fail = 0;
-const eq = (label, got, want) => {
+const eq = (label: string, got: unknown, want: unknown) => {
   const ok = JSON.stringify(got) === JSON.stringify(want);
   ok ? pass++ : fail++;
   if (!ok) console.log(`FAIL ${label}: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
@@ -21,9 +27,9 @@ const slaughter = MACHINE_BY_ID["slaughterspine"]; // 10 pts
 eq("over budget blocked", blockedReason(team, slaughter), "Not enough points left");
 
 // --- combat: the worked table from docs/rules.md 6.2 (attacker Attack 3) ---
-const A3 = { type: "Melee", attack: 3 };
-const dm = (armor, weak) => ({ type: "Melee", armor, weak });
-const cases = [
+const A3 = machine({ type: "Melee", attack: 3 });
+const dm = (armor: Side[], weak: Side[]) => machine({ type: "Melee", armor, weak });
+const cases: [string, TerrainId, TerrainId, Side, Side[], Side[], number][] = [
   ["grass->grass neutral", "grassland", "grassland", "F", [], [], 3],
   ["grass->grass armored", "grassland", "grassland", "F", ["F"], [], 2],
   ["grass->grass weak",    "grassland", "grassland", "F", [], ["F"], 4],
@@ -48,10 +54,10 @@ eq("attack E onto N-facing = left",  sideHitBy("N", "E"), "L");
 eq("attack W onto N-facing = right", sideHitBy("N", "W"), "R");
 
 // --- type modifiers -------------------------------------------------------
-eq("Swoop in chasm: penalty ignored, +1", attackerCP({type:"Swoop",attack:3},"chasm"), 4);
-eq("Swoop on mountain keeps bonus",       attackerCP({type:"Swoop",attack:3},"mountain"), 7);
-eq("Pull on marsh +1 offsets penalty",    attackerCP({type:"Pull",attack:3},"marsh"), 3);
-eq("Melee on marsh takes penalty",        attackerCP({type:"Melee",attack:3},"marsh"), 2);
+eq("Swoop in chasm: penalty ignored, +1", attackerCP(machine({type:"Swoop",attack:3}),"chasm"), 4);
+eq("Swoop on mountain keeps bonus",       attackerCP(machine({type:"Swoop",attack:3}),"mountain"), 7);
+eq("Pull on marsh +1 offsets penalty",    attackerCP(machine({type:"Pull",attack:3}),"marsh"), 3);
+eq("Melee on marsh takes penalty",        attackerCP(machine({type:"Melee",attack:3}),"marsh"), 2);
 
 // --- integration: a real board, attacks, knockback, VP -------------------
 const { parseBoard, newGame, movesFor, movePiece, rotatePiece, attackWith,
@@ -80,7 +86,7 @@ eq("gunner cannot hit adjacent", targetOf(gClose, gClose.pieces[0]).kind, "none"
 // Damage: attacker CP 3 (grass), defender CP 0 + facing. Burrower is armor F / weak B,
 // and it faces S into an attack travelling N, so its FRONT takes the hit: CP 1 -> 2 damage.
 const afterHit = attackWith(g0, gunner.uid);
-eq("front armour reduces the hit", afterHit.pieces.find(p => p.uid === prey.uid).hp, 4 - 2);
+eq("front armour reduces the hit", afterHit.pieces.find(p => p.uid === prey.uid)!.hp, 4 - 2);
 
 // Turn its back and the same shot hits harder: weak side, CP -1 -> 4 damage, lethal.
 const gBack = rotatePiece(g0, prey.uid, "N");
@@ -95,9 +101,9 @@ const gBreak = newGame(grid, [
   { machineId: "burrower", owner: 2, row: 3, col: 3, facing: "S" },   // armour F => CP 1
 ]);
 const broke = attackWith(gBreak, gBreak.pieces[0].uid);
-eq("defense break costs the attacker 1", broke.pieces.find(p => p.owner === 1).hp, 3 - 1);
-eq("defense break costs the defender 1", broke.pieces.find(p => p.owner === 2).hp, 4 - 1);
-eq("defender is knocked back a tile", broke.pieces.find(p => p.owner === 2).row, 2);
+eq("defense break costs the attacker 1", broke.pieces.find(p => p.owner === 1)!.hp, 3 - 1);
+eq("defense break costs the defender 1", broke.pieces.find(p => p.owner === 2)!.hp, 4 - 1);
+eq("defender is knocked back a tile", broke.pieces.find(p => p.owner === 2)!.row, 2);
 
 // Knockback into the board edge costs an extra 1.
 const gEdge = newGame(grid, [
@@ -105,7 +111,7 @@ const gEdge = newGame(grid, [
   { machineId: "burrower", owner: 2, row: 0, col: 3, facing: "S" },
 ]);
 const edge = attackWith(gEdge, gEdge.pieces[0].uid);
-eq("edge knockback costs an extra 1", edge.pieces.find(p => p.owner === 2).hp, 4 - 1 - 1);
+eq("edge knockback costs an extra 1", edge.pieces.find(p => p.owner === 2)!.hp, 4 - 1 - 1);
 
 // Activations: two per turn, and they must be different pieces.
 const twoUp = newGame(grid, [
@@ -148,7 +154,7 @@ eq("an enemy blocks the path", movesFor(wall, wall.pieces[0]).has(key(7, 2)), fa
 // --- corruption: the blight schedule (rules 2.5) --------------------------
 const { corruptionOrder, corruptedTiles, blightDone, isCorrupted } = await import("../src/index.ts");
 
-const coord = ([r, c]) => "abcdefgh"[c] + (8 - r);
+const coord = ([r, c]: [number, number]) => "abcdefgh"[c] + (8 - r);
 const p1Order = corruptionOrder(8, 1);
 const p2Order = corruptionOrder(8, 2);
 
@@ -195,13 +201,13 @@ eq("P1 front still closed", g.corruption.fronts[1], 0);
 g = endTurn(g);                       // -> P1's turn: P1's front takes h1, under the Clawstrider
 eq("P1 front opened", g.corruption.fronts[1], 1);
 eq("blight is under the Clawstrider", isCorrupted(g, 7, 7), true);
-eq("but it took no damage this turn", g.pieces.find(p => p.owner === 1).hp, 8);
+eq("but it took no damage this turn", g.pieces.find(p => p.owner === 1)!.hp, 8);
 
 g = endTurn(g); g = endTurn(g);       // back round to P1
-eq("now it burns for 2", g.pieces.find(p => p.owner === 1).hp, 6);
+eq("now it burns for 2", g.pieces.find(p => p.owner === 1)!.hp, 6);
 
 // Corruption replaces the terrain modifier entirely: -2 either way.
-eq("corrupted attacker CP", attackerCP({ type: "Melee", attack: 3 }, "mountain", true), 1);
+eq("corrupted attacker CP", attackerCP(machine({ type: "Melee", attack: 3 }), "mountain", true), 1);
 eq("corrupted defender CP", defenderCP(dm([], []), "mountain", "F", true), -2);
 
 // With corruption off the 50-round limit applies instead.
@@ -221,12 +227,12 @@ const { stepTerrain, rotateOffset, sweepTiles, attackPowerMod, previewAttack,
         combatPowerOf, terrainSkillBonus, shieldBonus } = await import("../src/index.ts");
 
 // 1. Attack-from-terrain bonuses: one per tier, +1 CP, only on that terrain.
-eq("Gallop on grassland", terrainSkillBonus({ skill: "Gallop" }, "grassland", false), 1);
-eq("Gallop elsewhere", terrainSkillBonus({ skill: "Gallop" }, "forest", false), 0);
-eq("Stalk on forest", terrainSkillBonus({ skill: "Stalk" }, "forest", false), 1);
-eq("Climb on hill", terrainSkillBonus({ skill: "Climb" }, "hill", false), 1);
-eq("High Ground on mountain", terrainSkillBonus({ skill: "High Ground" }, "mountain", false), 1);
-eq("no terrain bonus while corrupted", terrainSkillBonus({ skill: "Climb" }, "hill", true), 0);
+eq("Gallop on grassland", terrainSkillBonus(machine({ skill: "Gallop" }), "grassland", false), 1);
+eq("Gallop elsewhere", terrainSkillBonus(machine({ skill: "Gallop" }), "forest", false), 0);
+eq("Stalk on forest", terrainSkillBonus(machine({ skill: "Stalk" }), "forest", false), 1);
+eq("Climb on hill", terrainSkillBonus(machine({ skill: "Climb" }), "hill", false), 1);
+eq("High Ground on mountain", terrainSkillBonus(machine({ skill: "High Ground" }), "mountain", false), 1);
+eq("no terrain bonus while corrupted", terrainSkillBonus(machine({ skill: "Climb" }), "hill", true), 0);
 
 // 2/3. The ladder clamps, and skills can never dig a chasm.
 eq("marsh is the skill floor", stepTerrain("marsh", -1), "marsh");
@@ -267,8 +273,8 @@ const farAlly = { ...ally, row: 5, col: 3 };
 eq("out of the enemy's blind range", attackPowerMod({ ...aura, pieces: [...aura.pieces.slice(0,2), farAlly] }, farAlly), 1);
 
 // 5. Shield adds to the defender's Combat Power.
-eq("Shield defends", shieldBonus({ skill: "Shield" }), 1);
-eq("no shield, no bonus", shieldBonus({ skill: null }), 0);
+eq("Shield defends", shieldBonus(machine({ skill: "Shield" })), 1);
+eq("no shield, no bonus", shieldBonus(machine({ skill: null })), 0);
 
 // 6. Retaliate: the target turns to face its attacker and hits back for 1.
 let ret = newGame(grid, [
@@ -277,16 +283,16 @@ let ret = newGame(grid, [
 ]);
 const before = ret.pieces[0].hp;
 ret = attackWith(ret, ret.pieces[0].uid);
-eq("retaliation costs the attacker 1", ret.pieces.find(p => p.owner === 1).hp, before - 1);
-eq("retaliator turns to face", ret.pieces.find(p => p.owner === 2).facing, "S");
+eq("retaliation costs the attacker 1", ret.pieces.find(p => p.owner === 1)!.hp, before - 1);
+eq("retaliator turns to face", ret.pieces.find(p => p.owner === 2)!.facing, "S");
 
 // 7. Sweep: the area rotates with facing.
 eq("sweep offset facing north", rotateOffset("N", 1, 1), [-1, 1]);
 eq("sweep offset facing east", rotateOffset("E", 1, 1), [1, 1]);
 eq("sweep offset facing south", rotateOffset("S", 1, 1), [1, -1]);
 eq("sweep offset facing west", rotateOffset("W", 1, 1), [-1, -1]);
-eq("Thunderjaw sweeps three tiles", sweepTiles({ row: 4, col: 3, facing: "N" }, MACHINE_BY_ID["thunderjaw"]).length, 3);
-eq("Stormbird sweeps nine", sweepTiles({ row: 5, col: 3, facing: "N" }, MACHINE_BY_ID["stormbird"]).length, 9);
+eq("Thunderjaw sweeps three tiles", sweepTiles(piece({ row: 4, col: 3, facing: "N" }), MACHINE_BY_ID["thunderjaw"]).length, 3);
+eq("Stormbird sweeps nine", sweepTiles(piece({ row: 5, col: 3, facing: "N" }), MACHINE_BY_ID["stormbird"]).length, 9);
 
 // A Sweep hits everything in the area, both sides.
 let sweep = newGame(grid, [
@@ -295,7 +301,7 @@ let sweep = newGame(grid, [
   { machineId: "burrower", owner: 2, row: 3, col: 4, facing: "S" },
 ]);
 const sweepPreview = previewAttack(sweep, sweep.pieces[0].uid);
-eq("sweep hits both enemies at once", sweepPreview.hits.length, 2);
+eq("sweep hits both enemies at once", sweepPreview!.hits.length, 2);
 
 // --- preview matches what actually happens --------------------------------
 const pv = newGame(grid, [
@@ -305,21 +311,21 @@ const pv = newGame(grid, [
 const predicted = previewAttack(pv, pv.pieces[0].uid);
 const actual = attackWith(pv, pv.pieces[0].uid);
 const survivor = actual.pieces.find(p => p.owner === 2);
-eq("preview damage matches the real hit", predicted.hits[0].damage, 4 - survivor.hp);
-eq("preview reports no self damage here", predicted.selfDamage, 0);
+eq("preview damage matches the real hit", predicted!.hits[0].damage, 4 - survivor!.hp);
+eq("preview reports no self damage here", predicted!.selfDamage, 0);
 
 // Preview also predicts self-damage from retaliation.
 const retPreview = previewAttack(newGame(grid, [
   { machineId: "burrower", owner: 1, row: 4, col: 3, facing: "N" },
   { machineId: "rollerback", owner: 2, row: 3, col: 3, facing: "N" },
 ]), 1);
-eq("preview warns about retaliation", retPreview.selfDamage, 1);
+eq("preview warns about retaliation", retPreview!.selfDamage, 1);
 
 eq("combat power reads off the board", combatPowerOf(pv, pv.pieces[0]), 3);
 
 
 // --- auras are snapshotted at the start of a turn (rules 10.4) ------------
-const { attackEnvelope, snapshotAuras } = await import("../src/index.ts");
+const { attackEnvelope } = await import("../src/index.ts");
 
 let snap = newGame(grid, [
   { machineId: "longleg", owner: 1, row: 7, col: 3, facing: "N" },   // Empower, range 2
@@ -330,10 +336,10 @@ eq("no aura at range 3", snap.pieces[1].attackMod, 0);
 
 // Walk into the aura mid-turn: the snapshot does not change until next turn.
 snap = movePiece(snap, snap.pieces[1].uid, 7, 2);
-eq("still unbuffed the turn it moves in", snap.pieces.find(p => p.uid === 2).attackMod, 0);
+eq("still unbuffed the turn it moves in", snap.pieces.find(p => p.uid === 2)!.attackMod, 0);
 snap = endTurn(snap);   // P2
 snap = endTurn(snap);   // back to P1 — auras restamped
-eq("buff lands at the start of the next turn", snap.pieces.find(p => p.uid === 2).attackMod, 1);
+eq("buff lands at the start of the next turn", snap.pieces.find(p => p.uid === 2)!.attackMod, 1);
 
 // Blind is stamped on the victim too, so it bites on the victim's own turn.
 let blind = newGame(grid, [
@@ -341,7 +347,7 @@ let blind = newGame(grid, [
   { machineId: "burrower", owner: 2, row: 3, col: 3, facing: "S" },
 ]);
 blind = endTurn(blind);  // P2's turn begins, snapshot taken
-eq("blinded on its own turn", blind.pieces.find(p => p.owner === 2).attackMod, -1);
+eq("blinded on its own turn", blind.pieces.find(p => p.owner === 2)!.attackMod, -1);
 
 // --- attack envelope ------------------------------------------------------
 const envState = newGame(grid, [
@@ -377,8 +383,8 @@ eq("sprint is exactly +1 tile of reach", Math.max(...sprint.values()), Math.max(
 eq("every normal tile is still reachable", [...normal.keys()].every(k => sprint.has(k)), true);
 
 // Overcharge needs 2 health to declare.
-eq("healthy machine may overcharge", canOvercharge({ hp: 2 }), true);
-eq("a 1-health machine may not", canOvercharge({ hp: 1 }), false);
+eq("healthy machine may overcharge", canOvercharge(piece({ hp: 2 })), true);
+eq("a 1-health machine may not", canOvercharge(piece({ hp: 1 })), false);
 
 // The cost is paid after the action: a 2-health machine still lands its kill.
 let sac = newGame(grid, [
@@ -398,7 +404,7 @@ let fine = newGame(grid, [
   { machineId: "burrower", owner: 2, row: 0, col: 0, facing: "S" },
 ]);
 fine = payOverchargeCost(fine, fine.pieces[0].uid);
-eq("overcharge costs 2 health", fine.pieces.find(p => p.owner === 1).hp, 8 - 2);
+eq("overcharge costs 2 health", fine.pieces.find(p => p.owner === 1)!.hp, 8 - 2);
 
 // --- terrain changes are visible in state.grid ----------------------------
 // Regression: the board must render state.grid, not the grid parsed at setup.
