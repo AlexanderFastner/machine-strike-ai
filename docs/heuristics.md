@@ -285,13 +285,37 @@ uses would partly be grading its own homework.
   reply. H1 therefore also measures how much of that value one cheap evaluation term can capture — useful to know
   before paying for depth.
 
+### Implementation notes — written before any results
+
+Three decisions the design's wording left open, settled and committed before the matchups were run:
+
+- **The term stays symmetric.** The design says *"for each of the agent's own machines"*, but the existing facing
+  term scores both sides' machines — an enemy showing its weak side is good for you. Scoring only its own
+  machines would have deleted half the existing term: a second change. So both sides are scored, against next-turn
+  strike directions.
+- **One term per direction, not per enemy.** The old term added one exposure term per enemy already in reach. The
+  new one adds one per *direction* a blow could come from next turn, as the design specifies — so a weak back
+  that three enemies could reach scores −8 once, not −24. Some change in counting comes with moving from "which
+  enemies can reach" to "which directions are open"; it is recorded so the result is read with it in mind.
+- **Measured weak-side hits with a better instrument.** H0's 30% came from a throwaway script that inferred hits
+  from health changes. The permanent metric classifies each blow by re-running the engine's own targeting at the
+  moment of the attack, so collision damage and an attacker's own overcharge cost can't be miscounted as a hit on
+  a side. The same run re-measures `heuristic`'s baseline with the new instrument, and that is what H1 is
+  compared against. The success threshold stays at **below 20%**, as registered.
+
+The threat map is built on the engine's own targeting rules rather than a copy of them — `targetOf` was split so
+the same rules can be asked about a hypothetical position. Perft counts were unchanged by the split.
+
+Cost, measured before running: **26 activations/sec against `heuristic`'s 192 — 7.4× slower**, under the 10×
+flag.
+
 ### Status
 
 - [x] Designed, with success and falsification criteria written before any code or results
-- [ ] Move facing distribution and weak-side hit rate into `gameMetrics`, so H0's throwaway measurement becomes a
+- [x] Move facing distribution and weak-side hit rate into `gameMetrics`, so H0's throwaway measurement becomes a
       permanent instrument that H0 and H1 share
-- [ ] Next-turn threat map in the engine — which directions each machine can be struck from — with golden tests
-- [ ] `heuristic-facing` agent
+- [x] Next-turn threat map in the engine — `strikeDirections()`, with six golden tests
+- [x] `heuristic-facing` agent
 - [ ] Run the matchups
 - [ ] Watch a sample of replays: does the approach move now keep the back away from the enemy?
 - [ ] Record results and findings

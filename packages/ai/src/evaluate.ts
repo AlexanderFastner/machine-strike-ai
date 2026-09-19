@@ -1,5 +1,5 @@
 import {
-  MACHINE_BY_ID, TERRAIN_MOD, attackEnvelope, corruptedTiles, other,
+  MACHINE_BY_ID, TERRAIN_MOD, attackEnvelope, corruptedTiles, other, sideHitBy, strikeDirections,
   type GameState, type Owner, type Piece,
 } from "@ms/engine";
 
@@ -34,7 +34,21 @@ function sideToward(defender: Piece, attacker: Piece): "F" | "B" | "L" | "R" {
   return (["F", "R", "B", "L"] as const)[rel];
 }
 
-export function evaluate(s: GameState, me: Owner): number {
+/**
+ * Which threats the facing term scores against.
+ *  - "current":   enemies whose reach *from where they stand* covers the machine.
+ *                 Blind to anything that has to move first — nearly every blow
+ *                 that actually lands (heuristics.md, H0 finding 2).
+ *  - "next-turn": every direction an enemy could strike from after moving (H1).
+ * Nothing else in the evaluation differs between the two.
+ */
+export type EvalOptions = { facing: "current" | "next-turn" };
+
+export function evaluate(
+  s: GameState,
+  me: Owner,
+  opts: EvalOptions = { facing: "current" },
+): number {
   if (s.winner === me) return 1e6;
   if (s.winner === other(me)) return -1e6;
   if (s.winner === "draw") return 0;
@@ -79,6 +93,7 @@ export function evaluate(s: GameState, me: Owner): number {
 
       const iAmAttacking = attacker.owner === me;
       score += iAmAttacking ? WEIGHTS.threatening : WEIGHTS.threatened;
+      if (opts.facing !== "current") continue;
 
       const vm = MACHINE_BY_ID[victim.machineId];
       const side = sideToward(victim, attacker);
@@ -89,6 +104,25 @@ export function evaluate(s: GameState, me: Owner): number {
           : 0;
       // A weak side exposed is bad for the victim's owner.
       score += (victim.owner === me ? 1 : -1) * exposure;
+    }
+  }
+
+  if (opts.facing === "next-turn") {
+    // Same weights, same symmetry as the "current" term — scored for both
+    // sides' machines — but one term per direction a blow could come from next
+    // turn, rather than per enemy that can already reach.
+    const strikes = strikeDirections(s);
+    for (const victim of s.pieces) {
+      const vm = MACHINE_BY_ID[victim.machineId];
+      for (const dir of strikes.get(victim.uid)!) {
+        const side = sideHitBy(victim.facing, dir);
+        const exposure = vm.weak.includes(side)
+          ? WEIGHTS.weakSideExposed
+          : vm.armor.includes(side)
+            ? WEIGHTS.armourPresented
+            : 0;
+        score += (victim.owner === me ? 1 : -1) * exposure;
+      }
     }
   }
 

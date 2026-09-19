@@ -1,6 +1,7 @@
 import {
   MACHINE_BY_ID, VP_TO_WIN, checksum, corruptedTiles, endActivation, endTurn,
-  legalActivations, other, resolveActivation, sameActivation,
+  legalActivations, movePiece, other, resolveActivation, rotatePiece, sameActivation,
+  sideHitBy, targetOf,
   type Activation, type BoardFile, type GameState, type Owner, type Piece,
 } from "@ms/engine";
 import type { Agent } from "@ms/ai";
@@ -322,6 +323,17 @@ export type GameMetrics = {
   idle: string[];
   /** A machine stepping straight back to the square it left the move before. */
   oscillations: number;
+  /**
+   * Where each side leaves its machines facing after a move that does not attack,
+   * relative to the enemy's end of the board. Chance is 25 / 50 / 25.
+   */
+  facing: Record<Owner, { forward: number; sideways: number; backward: number }>;
+  /**
+   * Enemy blows each side's machines took, by the side they landed on. Classified
+   * by re-running the engine's targeting at the moment of the attack, so collision
+   * damage and an attacker's own overcharge cost are never counted as a hit on a side.
+   */
+  hitsTaken: Record<Owner, { weak: number; armour: number; neutral: number }>;
   problems: { step: number; text: string }[];
 };
 
@@ -331,6 +343,14 @@ export function gameMetrics(replay: Replay, frames: Frame[]): GameMetrics {
   const size = start.grid.length;
 
   const attacks = { 1: 0, 2: 0 } as Record<Owner, number>;
+  const facing = {
+    1: { forward: 0, sideways: 0, backward: 0 },
+    2: { forward: 0, sideways: 0, backward: 0 },
+  } as GameMetrics["facing"];
+  const hitsTaken = {
+    1: { weak: 0, armour: 0, neutral: 0 },
+    2: { weak: 0, armour: 0, neutral: 0 },
+  } as GameMetrics["hitsTaken"];
   const declined = { 1: 0, 2: 0 } as Record<Owner, number>;
   let firstAttackRound: number | null = null;
   let sprints = 0, overcharges = 0, passes = 0, terrainChanges = 0, optionSum = 0, decisions = 0;
@@ -351,8 +371,12 @@ export function gameMetrics(replay: Replay, frames: Frame[]): GameMetrics {
       if (a.attack) {
         attacks[step.player]++;
         firstAttackRound ??= step.round;
-      } else if (frame.attackAvailable) {
-        declined[step.player]++;
+        classifyHits(frames[i].state, a, step.player, hitsTaken);
+      } else {
+        if (frame.attackAvailable) declined[step.player]++;
+        const forward = step.player === 1 ? "N" : "S";
+        const backward = step.player === 1 ? "S" : "N";
+        facing[step.player][a.facing === forward ? "forward" : a.facing === backward ? "backward" : "sideways"]++;
       }
       if (a.sprint) sprints++;
       if (a.overcharge) overcharges++;
@@ -400,8 +424,31 @@ export function gameMetrics(replay: Replay, frames: Frame[]): GameMetrics {
     averageOptions: decisions ? optionSum / decisions : 0,
     idle,
     oscillations,
+    facing,
+    hitsTaken,
     problems: frames.flatMap((f, i) => f.problems.map((text) => ({ step: i, text }))),
   };
+}
+
+/** Which side each enemy blow of this attack landed on, per the engine's own targeting. */
+function classifyHits(
+  before: GameState,
+  a: Activation,
+  attackerOwner: Owner,
+  into: GameMetrics["hitsTaken"],
+) {
+  let pre = a.dest ? movePiece(before, a.uid, a.dest.row, a.dest.col) : before;
+  pre = rotatePiece(pre, a.uid, a.facing);
+  const attacker = pre.pieces.find((p) => p.uid === a.uid);
+  if (!attacker) return;
+  const t = targetOf(pre, attacker);
+  if (t.kind === "none") return;
+  for (const v of t.kind === "single" ? [t.victim] : t.victims) {
+    if (v.owner === attackerOwner) continue; // a Dash lane can clip its own side; not an enemy blow
+    const m = MACHINE_BY_ID[v.machineId];
+    const side = sideHitBy(v.facing, t.dir);
+    into[v.owner][m.weak.includes(side) ? "weak" : m.armor.includes(side) ? "armour" : "neutral"]++;
+  }
 }
 
 function howItEnded(replay: Replay, final: GameState): string {

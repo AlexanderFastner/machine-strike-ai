@@ -429,5 +429,47 @@ eq("the attacker's tile sinks to marsh", slither.grid[4][3], "marsh");
   eq("ending a finished turn changes nothing", endTurn(won), won);
 }
 
+
+// --- next-turn threat map (H1) --------------------------------------------
+{
+  const { strikeDirections } = await import("../src/index.ts");
+  const dirs = (st: any, uid: number) => [...strikeDirections(st).get(uid)!].sort();
+
+  // A Burrower two squares north can walk round to three sides — two of them only
+  // by sprinting, which it can afford — but not behind: that path is 5 long.
+  const approach = newGame(grid, [
+    { machineId: "clawstrider", owner: 1, row: 4, col: 3, facing: "N" },
+    { machineId: "burrower", owner: 2, row: 2, col: 3, facing: "S" },
+  ]);
+  eq("threatened from three directions", dirs(approach, 1), ["E", "S", "W"]);
+
+  // At 1 health it cannot pay to overcharge, so the sprint squares are out.
+  const tired = { ...approach, pieces: approach.pieces.map((p) => (p.owner === 2 ? { ...p, hp: 1 } : p)) };
+  eq("no sprint strikes without the health to overcharge", dirs(tired, 1), ["S"]);
+
+  // A Gunner only threatens from exactly its range: from three squares east it can
+  // step to two east, but can never use the adjacent square.
+  const gunner = newGame(grid, [
+    { machineId: "clawstrider", owner: 1, row: 4, col: 3, facing: "N" },
+    { machineId: "scrapper", owner: 2, row: 4, col: 6, facing: "W" },
+  ]);
+  eq("a Gunner threatens only along its exact range", dirs(gunner, 1), ["W"]);
+
+  // A friendly machine directly in front blocks the only approach from that side.
+  const screened = newGame(grid, [
+    { machineId: "clawstrider", owner: 1, row: 4, col: 3, facing: "N" },
+    { machineId: "burrower", owner: 1, row: 3, col: 3, facing: "N" },
+    { machineId: "burrower", owner: 2, row: 1, col: 3, facing: "S" },
+  ]);
+  eq("a screening ally stops the strike from the north", dirs(screened, 1).includes("S"), false);
+  eq("the screen itself is the one in danger", dirs(screened, 2).includes("S"), true);
+
+  // Nothing threatens a machine with no enemies on the board.
+  eq("no enemies, no threats", dirs(newGame(grid, [
+    { machineId: "clawstrider", owner: 1, row: 4, col: 3, facing: "N" },
+    { machineId: "burrower", owner: 1, row: 6, col: 3, facing: "N" },
+  ]), 1), []);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

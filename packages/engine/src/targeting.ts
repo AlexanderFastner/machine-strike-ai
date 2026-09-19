@@ -8,11 +8,25 @@ export type Target =
   | { kind: "lane"; victims: Piece[]; dir: Facing; landing: { row: number; col: number } }
   | { kind: "area"; victims: Piece[]; dir: Facing };
 
+/** Who stands on a square, and whether a square exists — the only things targeting reads. */
+export type Occupancy = (row: number, col: number) => Piece | undefined;
+export type OnBoard = (row: number, col: number) => boolean;
+
 /**
  * Targeting is derived from type, facing and range — never chosen (rules 3.3).
  * Friendly pieces count as "the first machine" and block the attack.
  */
 export function targetOf(state: GameState, piece: Piece): Target {
+  return targetFrom(piece, (r, c) => at(state, r, c), (r, c) => inBounds(state, r, c));
+}
+
+/**
+ * The targeting rules themselves, against any occupancy. Split out so a
+ * hypothetical — "if this enemy moved here, who could it hit?" — can remove the
+ * mover from its old square without a second copy of the rules that could drift
+ * from this one. Everything, including targetOf, runs through here.
+ */
+export function targetFrom(piece: Piece, occupant: Occupancy, onBoard: OnBoard): Target {
   const m = MACHINE_BY_ID[piece.machineId];
   const dir = piece.facing;
   const [dr, dc] = DELTA[dir];
@@ -21,8 +35,8 @@ export function targetOf(state: GameState, piece: Piece): Target {
   // Like Dash, an area effect does not discriminate between sides.
   if (hasSweep(m)) {
     const victims = sweepTiles(piece, m)
-      .filter(([r, c]) => inBounds(state, r, c))
-      .map(([r, c]) => at(state, r, c))
+      .filter(([r, c]) => onBoard(r, c))
+      .map(([r, c]) => occupant(r, c))
       .filter((p): p is Piece => !!p);
     if (victims.length === 0) return { kind: "none", reason: "Nothing in the sweep" };
     if (!victims.some((v) => v.owner !== piece.owner))
@@ -39,8 +53,8 @@ export function targetOf(state: GameState, piece: Piece): Target {
     for (let i = 0; i < m.range; i++) {
       r += dr;
       c += dc;
-      if (!inBounds(state, r, c)) return { kind: "none", reason: "Charge leaves the board" };
-      const occ = at(state, r, c);
+      if (!onBoard(r, c)) return { kind: "none", reason: "Charge leaves the board" };
+      const occ = occupant(r, c);
       if (occ && i < m.range - 1) victims.push(occ);
       else if (occ) return { kind: "none", reason: "No empty tile to land on" };
     }
@@ -52,8 +66,8 @@ export function targetOf(state: GameState, piece: Piece): Target {
     // Fires at exactly maximum range: anything closer is unhittable.
     const r = piece.row + dr * m.range;
     const c = piece.col + dc * m.range;
-    if (!inBounds(state, r, c)) return { kind: "none", reason: "Out of bounds" };
-    const occ = at(state, r, c);
+    if (!onBoard(r, c)) return { kind: "none", reason: "Out of bounds" };
+    const occ = occupant(r, c);
     if (!occ) return { kind: "none", reason: `Nothing at exactly ${m.range} tiles` };
     if (occ.owner === piece.owner) return { kind: "none", reason: "That is your own machine" };
     return { kind: "single", victim: occ, dir };
@@ -63,8 +77,8 @@ export function targetOf(state: GameState, piece: Piece): Target {
   for (let i = 1; i <= m.range; i++) {
     const r = piece.row + dr * i;
     const c = piece.col + dc * i;
-    if (!inBounds(state, r, c)) break;
-    const occ = at(state, r, c);
+    if (!onBoard(r, c)) break;
+    const occ = occupant(r, c);
     if (!occ) continue;
     if (occ.owner === piece.owner)
       return { kind: "none", reason: "Your own machine is in the way" };

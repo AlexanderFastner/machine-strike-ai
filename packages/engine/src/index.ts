@@ -6,6 +6,7 @@ export * from "./skills";
 export * from "./combat";
 export * from "./movement";
 export * from "./targeting";
+export * from "./threats";
 export * from "./game";
 export * from "./actions";
 export * from "./checksum";
