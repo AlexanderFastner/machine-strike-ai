@@ -67,7 +67,12 @@ function randomGame(seed: number, corruption: boolean): GameState {
   return newGame(grid, deployments, corruption);
 }
 
-function checkInvariants(s: GameState, seed: number, prevVp: { 1: number; 2: number }) {
+function checkInvariants(
+  s: GameState,
+  seed: number,
+  prevVp: { 1: number; 2: number },
+  startingPoints: number,
+) {
   const size = s.grid.length;
   const occupied = new Set<string>();
 
@@ -91,8 +96,8 @@ function checkInvariants(s: GameState, seed: number, prevVp: { 1: number; 2: num
   // the value of everything missing from the board.
   const alive = s.pieces.reduce((n, p) => n + MACHINE_BY_ID[p.machineId].points, 0);
   const scored = s.vp[1] + s.vp[2];
-  if (scored + alive !== s.startingPoints)
-    return fail(seed, `points do not balance: ${scored} scored + ${alive} alive != ${s.startingPoints}`);
+  if (scored + alive !== startingPoints)
+    return fail(seed, `points do not balance: ${scored} scored + ${alive} alive != ${startingPoints}`);
 
   for (const row of s.grid)
     for (const t of row)
@@ -115,7 +120,6 @@ for (let seed = 1; seed <= GAMES; seed++) {
   const corruption = seed % 2 === 0;
   let s = randomGame(seed, corruption);
   const startingPoints = s.pieces.reduce((n, p) => n + MACHINE_BY_ID[p.machineId].points, 0);
-  (s as GameState & { startingPoints: number }).startingPoints = startingPoints;
 
   const r = rng(seed * 7919);
   const cap = 400;
@@ -125,8 +129,7 @@ for (let seed = 1; seed <= GAMES; seed++) {
     const prevVp = { ...s.vp };
     const acts = legalActivations(s);
     s = acts.length === 0 ? endTurn(s) : applyActivation(s, acts[Math.floor(r() * acts.length)]);
-    (s as GameState & { startingPoints: number }).startingPoints = startingPoints;
-    checkInvariants(s, seed, prevVp);
+    checkInvariants(s, seed, prevVp, startingPoints);
     turns++;
     steps++;
   }
