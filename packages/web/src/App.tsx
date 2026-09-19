@@ -6,6 +6,7 @@ import { Handoff } from "./screens/Handoff";
 import { Deploy, type DeployPiece } from "./screens/Deploy";
 import { Game } from "./screens/Game";
 import { MapEditor } from "./screens/MapEditor";
+import { ReplayViewer } from "./screens/ReplayViewer";
 import { loadGame } from "./data/saves";
 import type { BoardFile } from "./board/terrain";
 import type { Deployment, GameState, Owner, Team } from "./data/machines";
@@ -14,6 +15,7 @@ type Screen =
   | { at: "landing" }
   | { at: "board" }
   | { at: "editor" }
+  | { at: "replay" }
   | { at: "draft"; board: BoardFile; corruption: boolean; player: Owner; teams: Partial<Record<Owner, Team>> }
   | { at: "handoff"; board: BoardFile; corruption: boolean; teams: Partial<Record<Owner, Team>> }
   | { at: "deploy"; board: BoardFile; corruption: boolean; teams: Record<Owner, Team> }
@@ -34,6 +36,7 @@ export function App() {
         <Landing
           onPlay={() => setScreen({ at: "board" })}
           onEdit={() => setScreen({ at: "editor" })}
+          onWatch={() => setScreen({ at: "replay" })}
           onContinue={() => {
             const save = loadGame();
             if (save)
@@ -50,6 +53,9 @@ export function App() {
 
     case "editor":
       return <MapEditor onDone={() => setScreen({ at: "board" })} />;
+
+    case "replay":
+      return <ReplayViewer onQuit={() => setScreen({ at: "landing" })} />;
 
     case "board":
       return (

@@ -1,4 +1,7 @@
-import { applyActivation, endTurn, legalActivations, type Owner } from "@ms/engine";
+import {
+  applyActivation, endTurn, legalActivations,
+  type Activation, type GameState, type Owner,
+} from "@ms/engine";
 import { makeRng, type Agent } from "@ms/ai";
 import { startPosition, type MatchSetup } from "./setup";
 
@@ -12,15 +15,29 @@ export type GameResult = {
   hitCap: boolean;
 };
 
-const ACTIVATION_CAP = 600;
+export const ACTIVATION_CAP = 600;
 
-export function playGame(
+/** Optional observers, so recording a game cannot change how it is played. */
+export type GameHooks = {
+  start?(state: GameState): void;
+  /** activation is null when the player passes the turn instead of acting. */
+  step?(before: GameState, after: GameState, activation: Activation | null, optionCount: number): void;
+};
+
+/**
+ * The one game loop. Tournaments, benches and replays all run through it, so a
+ * recorded game is the same code path as every game the arena counts — not a
+ * parallel reimplementation that could quietly disagree.
+ */
+export function runGame(
   p1: Agent,
   p2: Agent,
   setup: MatchSetup,
   seed: number,
+  hooks: GameHooks = {},
 ): GameResult {
   let s = startPosition(setup);
+  hooks.start?.(s);
   const rng = makeRng(seed);
   let activations = 0;
   let branchingTotal = 0;
@@ -29,8 +46,10 @@ export function playGame(
   while (!s.winner && activations < ACTIVATION_CAP) {
     const agent = s.turn === 1 ? p1 : p2;
     const options = legalActivations(s);
+    const before = s;
     if (options.length === 0) {
       s = endTurn(s);
+      hooks.step?.(before, s, null, 0);
       continue;
     }
     branchingTotal += options.length;
@@ -38,10 +57,12 @@ export function playGame(
     const act = agent.choose(s, rng);
     if (!act) {
       s = endTurn(s);
+      hooks.step?.(before, s, null, options.length);
       continue;
     }
     s = applyActivation(s, act);
     activations++;
+    hooks.step?.(before, s, act, options.length);
   }
 
   return {
@@ -53,6 +74,9 @@ export function playGame(
     hitCap: !s.winner,
   };
 }
+
+export const playGame = (p1: Agent, p2: Agent, setup: MatchSetup, seed: number) =>
+  runGame(p1, p2, setup, seed);
 
 export type MatchResult = {
   a: string;

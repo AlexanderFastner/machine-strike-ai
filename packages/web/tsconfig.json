@@ -30,6 +30,15 @@
       ],
       "@engine/*": [
         "../engine/src/*"
+      ],
+      "@ms/engine": [
+        "../engine/src/index.ts"
+      ],
+      "@ms/ai": [
+        "../ai/src/index.ts"
+      ],
+      "@ms/arena": [
+        "../arena/src/index.ts"
       ]
     }
   },

@@ -5,7 +5,8 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "arena": "tsx src/cli.ts"
+    "arena": "tsx src/cli.ts",
+    "test": "tsx test/replay.ts"
   },
   "dependencies": {
     "@ms/engine": "*",

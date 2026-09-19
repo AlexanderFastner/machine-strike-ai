@@ -33,6 +33,7 @@ See **[plan.md](plan.md)** for the full two-stage plan.
 | Sprint, overcharge, two activations, victory points, win conditions | Random symmetric map generator |
 | Six boards, a map editor, undo, and save/load | Search and learned agents (Stage 2 rungs 2-4) |
 | **Headless arena** with five baseline agents and Elo ratings | |
+| **Replay viewer** — step through any AI game move by move, with a battle report | |
 
 **Testing:** 123 golden assertions, 11 frozen perft counts, and 400 seeded fuzz games per run — all under
 `npm test`. What each suite checks is tracked in [docs/testing.md](docs/testing.md).
@@ -127,6 +128,8 @@ docs/             rules spec, piece stats
   known gaps. Add a line here when you add a rule.
 - **[docs/arena.md](docs/arena.md)** — how agents are measured, the current Elo ladder, and what the arena has
   surfaced about the game.
+- **[docs/heuristics.md](docs/heuristics.md)** — the AI experiments, each with its own metrics. The first is the
+  replay viewer and game-health check: **Watch an AI game** on the landing page.
 - **[plan.md](plan.md)** — architecture and the road to the AI stage.
 
 ## Credits

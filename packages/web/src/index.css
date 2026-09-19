@@ -653,3 +653,103 @@ button.overcharged {
   font-size: 0.8rem; box-shadow: 0 6px 24px rgba(0,0,0,.5);
   z-index: 10;
 }
+
+/* ============================= replay viewer ============================= */
+
+.screen.replay { width: min(100%, 86rem); }
+
+.replay-head {
+  display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap;
+}
+.replay-head .sub { margin-top: 0.3rem; }
+
+.replay-layout {
+  display: grid;
+  grid-template-columns: minmax(17rem, 22rem) auto minmax(15rem, 18rem);
+  gap: 1.25rem;
+  align-items: start;
+}
+@media (max-width: 1250px) {
+  .replay-layout { grid-template-columns: auto minmax(15rem, 1fr); }
+  .replay-layout .report { grid-column: 1 / -1; order: 2; }
+}
+
+/* --- battle report --- */
+.report { gap: 0.75rem; }
+.report-meta { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.report-headline { margin: 0; font-size: 1rem; font-weight: 650; line-height: 1.35; }
+.report-choice { margin: 0; font-size: 0.74rem; color: var(--muted); }
+.report-note { margin: 0; font-size: 0.74rem; color: var(--muted); font-style: italic; }
+.report-section { display: flex; flex-direction: column; gap: 0.4rem; }
+.report-section h4 {
+  margin: 0; font-size: 0.7rem; color: var(--muted); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding-top: 0.5rem; border-top: 1px solid var(--line);
+}
+
+.effects { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+.effect {
+  font-size: 0.8rem; line-height: 1.4; padding: 0.35rem 0.5rem;
+  border-radius: 6px; background: #151b23; border-left: 3px solid var(--line);
+}
+.effect.p1 { border-left-color: #f2c14e; }
+.effect.p2 { border-left-color: #6fb8f2; }
+.effect.damage { color: #ffb0b0; }
+.effect.destroyed { color: #fff; background: rgba(170, 30, 30, 0.35); font-weight: 600; }
+.effect.moved, .effect.turned { color: #cfd8e3; }
+.effect.terrain { border-left-color: #6fcf8e; }
+.effect.blight { border-left-color: #b25a9a; color: #e9c6df; }
+.effect.score { color: var(--accent); font-weight: 600; }
+.effect.result {
+  color: #1a1408; background: var(--accent); font-weight: 700; border-left-color: var(--accent);
+}
+
+.engine-log summary { font-size: 0.7rem; color: var(--muted); cursor: pointer; }
+.engine-log ul { margin: 0.3rem 0 0; padding-left: 1rem; font-size: 0.72rem; color: var(--muted); }
+
+.warn b { display: block; margin-bottom: 0.2rem; }
+
+/* --- board column --- */
+.replay-board { display: flex; flex-direction: column; gap: 0.75rem; align-items: stretch; }
+.scrubber { display: flex; align-items: center; gap: 0.35rem; }
+.scrubber button { padding: 0.3rem 0.55rem; }
+.scrubber input[type="range"] { flex: 1; accent-color: var(--accent); }
+
+.tile .piece.ghost.fallen {
+  opacity: 0.55;
+  filter: grayscale(1) drop-shadow(0 0 3px #ff4a4a);
+}
+
+/* --- side panel --- */
+.replay-side { gap: 0.8rem; }
+.health dl { margin: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.health dl > div { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.74rem; }
+.health dt { color: var(--muted); }
+.health dd { margin: 0; font-variant-numeric: tabular-nums; }
+.health dl > div.flag dd { color: #ff8f8f; font-weight: 650; }
+
+.step-list {
+  list-style: none; margin: 0; padding: 0;
+  max-height: 20rem; overflow-y: auto;
+  border: 1px solid var(--line); border-radius: 8px;
+}
+.step-list li button {
+  width: 100%; text-align: left; border: 0; border-radius: 0;
+  padding: 0.28rem 0.5rem; font-size: 0.74rem;
+  display: flex; align-items: center; gap: 0.35rem; background: transparent;
+}
+.step-list li + li button { border-top: 1px solid #1f2731; }
+.step-list li.on button { background: color-mix(in srgb, var(--accent) 16%, var(--panel)); }
+.step-list li.bad button { color: #ff8f8f; }
+.step-list .n { width: 1.7rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tag-atk { color: #ffb35c; margin-left: auto; }
+.tag-kill { color: #ff5d5d; font-weight: 800; }
+
+.gen-options summary { font-size: 0.78rem; color: var(--muted); cursor: pointer; margin-bottom: 0.5rem; }
+.gen-options { display: flex; flex-direction: column; gap: 0.45rem; }
+.gen-options[open] { gap: 0.45rem; }
+.field select {
+  font: inherit; font-size: 0.82rem; padding: 0.35rem 0.4rem; border-radius: 7px;
+  background: #151b23; color: var(--text); border: 1px solid var(--line);
+}
+code { font-size: 0.72rem; }

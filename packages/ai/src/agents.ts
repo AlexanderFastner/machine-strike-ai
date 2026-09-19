@@ -2,7 +2,7 @@ import {
   MACHINE_BY_ID, applyActivation, legalActivations, other,
   type Activation, type GameState, type Owner,
 } from "@ms/engine";
-import { argmaxRandom, pick, type Agent, type Rng } from "./agent";
+import { argmaxRandom, pick, type Agent } from "./agent";
 import { evaluate } from "./evaluate";
 
 /** The floor. Anything that cannot beat this is broken, not merely weak. */

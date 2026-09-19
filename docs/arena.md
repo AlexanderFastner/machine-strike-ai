@@ -8,7 +8,13 @@ error bar"*, every later result is an anecdote.
 npm run arena -- tournament --pairs 50
 npm run arena -- match --a heuristic --b greedy --pairs 50
 npm run arena -- bench --agent heuristic --games 20
+npm run arena -- record --a heuristic --b greedy
+npm run arena -- health --a heuristic --b greedy --games 100
 ```
+
+`record` saves one random tournament game as a replay; `health` measures game-shape metrics over many games.
+Both belong to the first experiment in [heuristics.md](heuristics.md), which is where the replay viewer and the
+metrics are described.
 
 Flags: `--board`, `--team`, `--corruption on|off`, `--seed`, `--pairs`, `--agents a,b,c`.
 
@@ -112,6 +118,9 @@ move this number much, whereas pruning and move ordering would.
 
 ## What was caught while building this
 
+- **The engine kept playing after a win.** Found while building the replay tooling: a winning activation rolled
+  on into the next turn and spread the blight on a finished board. Fixed in the engine — see
+  [heuristics.md](heuristics.md), H0 finding 1.
 - **An illegal team in the draft book.** The first `varied` set totalled 14 points against a budget of 10, and
   the arena played it without complaint. Teams are now validated at module load, so an illegal set fails loudly
   rather than quietly producing meaningless results.
@@ -126,3 +135,4 @@ move this number much, whereas pruning and move ordering would.
 - [ ] Drafting is deliberately excluded. Measuring draft strength needs a separate harness.
 - [ ] The agents share the engine's `applyActivation` path — the same one the UI still does *not* use. See
       [testing.md](testing.md) §5.
+- [x] ~~No way to see what actually happens in a game.~~ The replay viewer — [heuristics.md](heuristics.md), H0.

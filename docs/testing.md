@@ -16,7 +16,8 @@ npm test
 npm run test:fuzz:deep
 ```
 
-`npm test` runs all three suites (a few seconds). `test:fuzz:deep` runs 5000 games instead of 400.
+`npm test` runs the three engine suites plus the arena's replay tests (a few seconds). `test:fuzz:deep` runs
+5000 games instead of 400.
 
 ---
 
@@ -29,6 +30,7 @@ They fail in different ways on purpose. Each catches a class of bug the others s
 | **Golden** | `test/golden.ts` | Specific rules producing specific numbers — the damage table, skill effects, turn order | Anything nobody thought to write a case for |
 | **Perft** | `test/perft.ts` | Any change to the *shape* of the legal action space, whether or not it was intended | Whether the resulting states are sane |
 | **Fuzz** | `test/fuzz.ts` | States that are each individually legal but collectively impossible, across thousands of random games | Whether the rules match the real game |
+| **Replay** | `packages/arena/test/replay.ts` | Recorded games failing to re-execute exactly, and the replay checks failing to notice when they don't | Anything the recorded games happen not to exercise |
 
 The division earns its keep. The Dash landing bug in §4 was invisible to golden tests (nobody thought to write
 that case) and invisible to perft (the action counts were correct — it was the *resolution* that was wrong).
@@ -36,7 +38,7 @@ Only fuzz found it, and only because it checked an invariant rather than an expe
 
 ---
 
-## 1. Golden tests — 123 assertions
+## 1. Golden tests — 127 assertions
 
 Specific positions with hand-computed expected results, taken from [docs/rules.md](rules.md).
 
@@ -116,6 +118,12 @@ Specific positions with hand-computed expected results, taken from [docs/rules.m
 - [x] The two limits are enforced independently
 
 ---
+
+### A finished game stays finished
+
+- [x] A winning attack does not pass the turn
+- [x] The blight does not spread after the game is won
+- [x] Ending the turn on a finished game changes nothing
 
 ## 2. Perft — 11 frozen counts
 
@@ -199,6 +207,13 @@ Seeded random playouts. Every failure prints a seed that reproduces it exactly.
 
 Worth recording, because it is the argument for the effort.
 
+- **The engine kept playing after a win** *(found by the replay tooling, not a test)* — when an activation won
+  the game, `endActivation` still rolled on into the next player's turn: in 57 of 198 games the blight spread
+  across an already-finished board, and corruption damage or a Spray kill could have awarded points after the
+  winner was decided. No existing suite looked at the state after a game ended, because every game loop stops
+  as soon as there is a winner. A finished game now stays finished; four golden tests cover it, and the replay
+  checks flag it if it ever comes back.
+
 - **Dash landing collision** *(found by fuzz, first run)* — a Dash charge validates that its landing tile is
   empty when the attack is declared. But if a machine in its lane triggers a Defense Break, that defender is
   knocked *backwards* — which is exactly where the charge was heading. The Charger then landed on top of it.
@@ -207,6 +222,21 @@ Worth recording, because it is the argument for the effort.
   charge holds its ground.
 
 ---
+
+## Replay tests — `packages/arena/test/replay.ts`
+
+Replays prove a game re-executes exactly, so the replay code needs its own evidence twice over: that honest
+recordings re-execute cleanly, and that the checks actually fire when something is wrong.
+
+- [x] 48 recorded games — 4 matchups × 4 boards × 3 seeds, blight on and off — re-execute with no problems after
+      a JSON round-trip, exactly as a file on disk would
+- [x] Every step of every one of those games produces a battle report without error
+- [x] A tampered checksum is reported as divergence
+- [x] An illegal activation is reported
+- [x] A misreported option count is reported
+- [x] A changed starting position is reported
+- [x] Passing while legal moves exist is flagged
+- [x] Game metrics agree with the recorded result: rounds, a winner explained, a first attack recorded
 
 ## 5. Known gaps
 
@@ -222,5 +252,9 @@ Honest list of what these tests do **not** cover.
 - [ ] **23 open rules questions** remain in [rules.md §13](rules.md#13-open-questions), each with a house rule
       standing in. The tests verify the house rules, not the real game.
 - [ ] **No UI tests.** Screens are verified by hand in the browser.
+- [ ] **The `ai` and `arena` packages are only typechecked through the web build.** `tsx` strips types without
+      checking them, so code the web app does not import — the arena CLI, the test files — is never
+      typechecked. The web build caught an unused import in the AI package the first time it pulled the package
+      in. A `typecheck` script per package would close this.
 - [ ] **Perft depth is shallow** (2 in the committed set). Deeper counts on larger positions would catch more,
       but the tree grows too fast for the current engine to explore them in a test run.

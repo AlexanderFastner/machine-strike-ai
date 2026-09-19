@@ -22,3 +22,6 @@ experiments/**/results/
 # build artifacts
 *.tsbuildinfo
 .firebase/
+
+# recorded arena games — any one can be regenerated from its seed
+replays/

@@ -18,6 +18,8 @@ export type PlacedPiece = {
   poolIndex?: number;
   uid?: number;
   hp?: number;
+  /** Drawn as a destroyed machine rather than a planned position (replays). */
+  fallen?: boolean;
 };
 
 type Props = {
@@ -42,6 +44,8 @@ type Props = {
   threatTiles?: Set<string>;
   /** Semi-transparent piece shown at a proposed destination. */
   ghost?: PlacedPiece;
+  /** Further translucent pieces: where a machine came from, or where one fell. */
+  ghosts?: PlacedPiece[];
 };
 
 export function Board({
@@ -58,6 +62,7 @@ export function Board({
   attackTiles,
   threatTiles,
   ghost,
+  ghosts = [],
 }: Props) {
   const size = grid.length;
   const at = new Map(pieces.map((p) => [`${p.row}-${p.col}`, p]));
@@ -79,7 +84,11 @@ export function Board({
             const blighted = corrupted?.has(`${r},${c}`) ?? false;
             const inRange = attackTiles?.has(`${r},${c}`) ?? false;
             const threatened = threatTiles?.has(`${r},${c}`) ?? false;
-            const isGhost = ghost && ghost.row === r && ghost.col === c;
+            const ghostsHere = [...(ghost ? [ghost] : []), ...ghosts].filter(
+              (g) => g.row === r && g.col === c,
+            );
+            // A machine that died here keeps its damage badge, on its ghost.
+            const badgeUid = piece?.uid ?? ghostsHere.find((g) => g.fallen)?.uid;
             const sprintOnly = sprintTiles?.has(`${r},${c}`) ?? false;
             const coord = `${FILES[c]}${size - r}`;
             const machine = piece && MACHINE_BY_ID[piece.machineId];
@@ -124,18 +133,19 @@ export function Board({
                     {powerOf(piece)}
                   </span>
                 )}
-                {isGhost && (
+                {ghostsHere.map((g, i) => (
                   <img
-                    className={`piece ghost p${ghost!.owner}`}
-                    src={SPRITE[ghost!.machineId]}
+                    key={`g${i}`}
+                    className={`piece ghost p${g.owner}${g.fallen ? " fallen" : ""}`}
+                    src={SPRITE[g.machineId]}
                     alt=""
                     draggable={false}
-                    style={{ transform: `rotate(${ROTATION[ghost!.facing]}deg)` }}
+                    style={{ transform: `rotate(${ROTATION[g.facing]}deg)` }}
                   />
-                )}
-                {piece && preview?.has(piece.uid!) && (
-                  <span className={`dmg${preview.get(piece.uid!)!.lethal ? " lethal" : ""}`}>
-                    −{preview.get(piece.uid!)!.damage}
+                ))}
+                {badgeUid !== undefined && preview?.has(badgeUid) && (
+                  <span className={`dmg${preview.get(badgeUid)!.lethal ? " lethal" : ""}`}>
+                    −{preview.get(badgeUid)!.damage}
                   </span>
                 )}
               </div>

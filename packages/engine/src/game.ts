@@ -297,11 +297,16 @@ export function endActivation(s0: GameState, uid: number): GameState {
   const s = clone(s0);
   if (!s.activated.includes(uid)) s.activated.push(uid);
   s.activationsLeft -= 1;
+  // A finished game stays finished. Without this, the winning blow rolled on into
+  // the next turn: the blight spread on a decided board, and corruption damage or
+  // Spray could have awarded points after the winner was already settled.
+  if (s.winner) return s;
   if (s.activationsLeft <= 0 || activatable(s, s.turn).length === 0) return endTurn(s);
   return s;
 }
 
 export function endTurn(s0: GameState): GameState {
+  if (s0.winner) return s0;
   const s = clone(s0);
   const next = other(s.turn);
   if (next === 1) s.round += 1;

@@ -411,5 +411,23 @@ slither = attackWith(slither, slither.pieces[0].uid);
 eq("Alter Terrain really changes state.grid", slither.grid[4][3] !== beforeGrid, true);
 eq("the attacker's tile sinks to marsh", slither.grid[4][3], "marsh");
 
+
+// --- a finished game stays finished ---------------------------------------
+// Regression: the winning blow used to roll on into the next turn, spreading
+// the blight on a decided board. Found by the replay tooling, not by a test.
+{
+  let g = newGame(grid, [
+    { machineId: "stalker", owner: 1, row: 4, col: 3, facing: "N" },     // atk 4
+    { machineId: "burrower", owner: 2, row: 3, col: 3, facing: "N" },    // 4hp, weak back
+  ], true);
+  g = endTurn(endTurn(g));                  // round 2: both fronts are open, blight is live
+  const blightBefore = corruptedTiles(8, g.corruption).size;
+  const won = endActivation(attackWith(g, g.pieces[0].uid), g.pieces[0].uid);
+  eq("the attack wins by elimination", won.winner, 1);
+  eq("the turn does not pass after the win", won.turn, 1);
+  eq("the blight does not spread after the win", corruptedTiles(8, won.corruption).size, blightBefore);
+  eq("ending a finished turn changes nothing", endTurn(won), won);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

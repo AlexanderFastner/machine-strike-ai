@@ -64,13 +64,37 @@ export function legalActivations(s: GameState): Activation[] {
   return out;
 }
 
-export function applyActivation(s0: GameState, a: Activation): GameState {
+/**
+ * Everything the activation itself does — move, turn, attack, overcharge — but
+ * not the bookkeeping that follows. Split out so a replay can show the two
+ * separately: an activation's effects, then whatever the start of the next turn
+ * does (blight spreading, corruption damage, Spray, Whiplash). Lumping them
+ * together would make corruption damage look like it came from the last attack.
+ */
+export function resolveActivation(s0: GameState, a: Activation): GameState {
   let s = s0;
   if (a.dest) s = movePiece(s, a.uid, a.dest.row, a.dest.col);
   s = { ...s, pieces: s.pieces.map((p) => (p.uid === a.uid ? { ...p, facing: a.facing } : p)) };
   if (a.attack) s = a.overcharge ? overchargeAttack(s, a.uid) : attackWith(s, a.uid);
   else if (a.overcharge) s = payOverchargeCost(s, a.uid);
-  return endActivation(s, a.uid);
+  return s;
+}
+
+export function applyActivation(s0: GameState, a: Activation): GameState {
+  return endActivation(resolveActivation(s0, a), a.uid);
+}
+
+export function sameActivation(a: Activation, b: Activation): boolean {
+  return (
+    a.uid === b.uid &&
+    a.sprint === b.sprint &&
+    a.facing === b.facing &&
+    a.attack === b.attack &&
+    a.overcharge === b.overcharge &&
+    (a.dest === null
+      ? b.dest === null
+      : b.dest !== null && a.dest.row === b.dest.row && a.dest.col === b.dest.col)
+  );
 }
 
 /**
