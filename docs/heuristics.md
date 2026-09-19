@@ -190,7 +190,8 @@ them needs teams built around them.
 Not scheduled — listed so they aren't lost:
 
 - **Facing-aware evaluation** — score facing against enemies that could reach a machine *next turn*, not only
-  right now (finding 2). **→ now [H1](#h1--facing-aware-evaluation).**
+  right now (finding 2). **→ tested as [H1](#h1--facing-aware-evaluation): falsified — the term worked, the agent
+  lost.**
 - **Spreading activations** — does using more of the set win more, or are idle machines a correct choice
   (finding 3)?
 - **Mechanic-focused teams** — draft-book sets built around terrain skills, Pull and Swoop, so their effect on
@@ -316,11 +317,95 @@ flag.
       permanent instrument that H0 and H1 share
 - [x] Next-turn threat map in the engine — `strikeDirections()`, with six golden tests
 - [x] `heuristic-facing` agent
-- [ ] Run the matchups
-- [ ] Watch a sample of replays: does the approach move now keep the back away from the enemy?
-- [ ] Record results and findings
+- [x] Run the matchups — 1,000 games, 0 replay problems
+- [x] Watch a sample of replays: does the approach move now keep the back away from the enemy? **Yes** — see
+      finding 2
+- [x] Record results and findings
 
 ### Results
 
-Not yet run.
+**H1 is falsified on its primary criterion.** The facing term does exactly what it was built to do — and the
+agent that uses it is worse.
+
+Measured at commit `0835efc`, which holds the implementation and these notes as they stood before the run. Full
+per-agent tables: [`experiments/h1-facing/results.md`](../experiments/h1-facing/results.md), regenerated with
+`npx tsx experiments/h1-facing/run.ts`.
+
+| Criterion | Registered | Result | Verdict |
+|---|---|---|---|
+| **Head-to-head score** (primary) | lower bound above 50% | **28.0%** (21.7 – 34.3%), ≈ −164 Elo | **Falsified** |
+| **Weak-side hits suffered** | below 20% (from 30%) | **10.7%**, against `heuristic`'s re-measured 30.6% | Met |
+| **Score vs `greedy`** | at least 75% | **72.0%** (65.7 – 78.3%) — the control scored 81.0% (75.3 – 86.7%) | Missed |
+| **Facing on approach moves** | backward well under 25% | **6%** backward, 66% forward — from 25% / 24% | Met |
+
+Reported, not scored:
+
+| Guard | `heuristic-facing` | `heuristic` |
+|---|---|---|
+| Attacks declined per game — head-to-head | 5.3 | 4.9 |
+| Attacks declined per game — against `greedy` | **3.4** | 1.7 |
+| Game length against `greedy` | 5.5 rounds | 4.7 rounds |
+| First attack against `greedy` | round 2.0 | round 1.7 |
+| Decisions per second | 23–25 | 139–156 — so ~6× slower, under the 10× flag |
+
+Terrain check, head-to-head:
+
+| Board | Score | Weak-side hits: new / old |
+|---|---|---|
+| Plains and Forests | 28.0% (21.7 – 34.3%) | 10.7% / 30.6% |
+| Mountains | 43.0% (33.3 – 52.7%) | 15.2% / 29.8% |
+| Coastal | 49.0% (38.7 – 59.3%) | 8.1% / 23.5% |
+
+### Findings
+
+**1. The term works.** Weak-side hits fell by about two-thirds on every board — 30.6% to 10.7% head-to-head, and
+under the 20% bar everywhere — and backward facing all but vanished. The model of where blows come from is
+sound, which rules out the table's *"the term isn't working"* row: whatever went wrong, it isn't the threat map.
+
+**2. The agent loses anyway — the outcome the reading table didn't list.** Weak-side hits down, wins *down*. The
+nearest row was *"↓ / flat — the caution costs tempo elsewhere"*, and this is a stronger version of it: the caution
+costs more than the facing gains. The tempo cost is visible in every guard. Games run nearly a round longer, first
+contact comes later, and against `greedy` it turns down twice as many attacks. And in head-to-head games it
+**took 1,008 hits and landed 725** — in the same games, its opponent out-hit it by 39%. It is protecting its weak
+sides from blows it then receives on its other sides, because the time spent turning is time not spent striking.
+
+On H0's replay seed the difference is plain. The old agent turns its Stalker's back to the enemy on move 1, then
+attacks on moves 3 and 4. The new one never faces backward — and spends its first four moves repositioning without
+a single attack. (The positions diverge after move 1, so that comparison is an illustration, not a controlled
+one.)
+
+**3. Terrain shrinks the loss.** On Mountains it scores 43% and on Coastal 49%, and both intervals reach 50%.
+Where high ground or marsh already dominates positioning, the facing bias costs less. With 100 games per board,
+don't read more into it than that.
+
+### Why — exploratory, not pre-registered
+
+Everything in this section came *after* the results, so it is a hypothesis to test, not a finding.
+
+Across 275 of `heuristic-facing`'s decisions in 24 head-to-head games:
+
+- The facing term accounts for a median **37%** of the difference between the options the agent weighs. It is
+  now a major driver of nearly every move.
+- Its **enemy half** — rewarding positions from which the agent could hit an *enemy's* weak side next turn —
+  **changes the chosen move in 43% of decisions** when dropped.
+
+That enemy half is the one H1's implementation notes chose to keep, arguing symmetry was "one variable". But the
+two halves aren't equally real. **The opponent moves next, and turning is free.** A threat against the agent's
+own weak side is real: the enemy is about to move and can use it. A threat against an enemy's weak side mostly
+isn't: the enemy gets to turn away before the agent's next turn arrives. So nearly half the time, the agent may be
+spending its move setting up a threat that will simply be turned away from — instead of hitting something now.
+
+If that's right, **the design's original wording — score the agent's own machines only — was the better design**,
+and the implementation note overrode it. That is the most useful thing H1 turned up, and it is the reason the
+notes were committed before the run: it is possible to see exactly which decision to question.
+
+### Candidates this surfaced
+
+Not scheduled — listed so they aren't lost:
+
+- **H1b — facing for own machines only.** Drop the enemy half; nothing else changes. Tests the hypothesis above
+  directly. If it wins, the lesson is about *which threats are real*, not about facing.
+- **Rescale the facing weights.** The −8 / +4 weights were hand-set for a term that rarely fired; next-turn threats
+  fire constantly, and the term now drives 37% of decisions. Weight tuning is a separate variable, so it belongs in
+  its own entry — and after H1b, so the two effects can be told apart.
 
