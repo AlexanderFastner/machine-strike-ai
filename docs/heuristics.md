@@ -190,8 +190,113 @@ them needs teams built around them.
 Not scheduled — listed so they aren't lost:
 
 - **Facing-aware evaluation** — score facing against enemies that could reach a machine *next turn*, not only
-  right now (finding 2).
+  right now (finding 2). **→ now [H1](#h1--facing-aware-evaluation).**
 - **Spreading activations** — does using more of the set win more, or are idle machines a correct choice
   (finding 3)?
 - **Mechanic-focused teams** — draft-book sets built around terrain skills, Pull and Swoop, so their effect on
   play can be measured at all (finding 4).
+
+---
+
+## H1 — Facing-aware evaluation
+
+**Question.** Does the heuristic agent get stronger if its evaluation scores facing against the enemies that could
+strike a machine *next turn*, instead of only the ones that can strike it from where they stand right now?
+
+**Background.** H0 found that `heuristic` chooses its facing at chance level — 24% forward, 47% sideways, 29%
+backward on non-attacking moves, against the 25 / 50 / 25 a coin would give — and that its machines are hit on a
+weak side 30% of the time, barely better than `random`'s 36%.
+
+The cause is precise. The facing term in `packages/ai/src/evaluate.ts` counts an enemy only if its attack
+envelope *from its current square* already covers the machine. **Movement is not considered.** But movement is 2–4
+and range 1–3, so nearly every blow that actually lands comes from a machine that moved first — and the term
+cannot see any of them. It is scoring facing against almost none of the threats that matter.
+
+For a one-activation-deep agent, "next turn" is the right horizon: it is exactly the opponent's reply, the only
+future this agent can reason about at all.
+
+### The change — one variable
+
+For each of the agent's own machines, work out **every direction it could be struck from next turn**. An enemy
+threatens a direction if it can move to a square from which its attack, facing the machine, would connect — using
+the real targeting rules, so a Gunner's exact range, friendly pieces blocking a ray and Sweep areas are all
+respected. Reach includes sprint squares when the enemy has the 2 health to overcharge, since H0 measured 2.7
+overcharges per game — too common to leave as a blind spot.
+
+The existing weights then apply to the side facing each threatened direction: **−8** for a weak side, **+4** for an
+armoured one.
+
+**Only the facing term changes.** The weights stay the same, and the separate `threatened` / `threatening` counts
+keep using current reach. Making those counts next-turn-aware as well would be a second variable, and a result
+could not then say which change caused it. That is a candidate for a later entry, not part of this one.
+
+### Hypothesis
+
+Keeping weak sides away from the machines that are about to arrive should cut weak-side hits sharply and win
+games. **30 of the 43 machines have a weak back** — 24 of them armoured in front and weak behind — so the obvious
+failure, walking towards the enemy with the back turned, should mostly disappear. Weak-side hits will not reach zero: attacking
+locks a machine's facing towards its target, which can turn its back on a second enemy.
+
+### Method
+
+- **New agent** `heuristic-facing`: identical to `heuristic` except for the facing term above.
+- **Head-to-head:** `heuristic-facing` vs `heuristic`, 100 paired games (200 total), seeds 1–100. This is the
+  primary test.
+- **Against the ladder:** each against `greedy`, 100 pairs, so a gain can't be specific to one opponent.
+- **Terrain check:** head-to-head repeated on Mountains and Coastal, 50 pairs each — high ground and marsh change
+  how much facing matters relative to position.
+- **Fixed:** standard team, corruption on, arena defaults otherwise.
+
+### Metrics
+
+Written down before any code or results exist, so the result can't be rationalised afterwards. If it misses these,
+it is reported as a miss — the thresholds don't get re-derived.
+
+| Metric | What it measures | Success | Falsified if |
+|---|---|---|---|
+| **Head-to-head score** (primary) | `heuristic-facing` vs `heuristic`, with 95% interval | lower bound above **50%** | interval includes 50% or sits below it |
+| **Weak-side hits suffered** | Share of hits landing on a weak side — the outcome, measured independently of the eval | below **20%** (from 30%) | not clearly below 30% — the term is not doing what it claims |
+| **Score vs `greedy`** | No regression elsewhere | at least `heuristic`'s 75% | clearly below it |
+| **Facing on approach moves** | Forward / sideways / backward, as in H0 | backward well under 25% | still at chance |
+| Declined attacks | A more careful agent may refuse attacks that expose its back | *reported* | — |
+| Game length, first attack | Caution can turn into stalling | *reported* | — |
+| Decisions per second | The threat map costs time; that matters once search depth depends on it | *reported*; flag if over 10× slower | — |
+
+The weak-side hit rate is the metric to trust, because it is measured from what actually happens in games rather
+than from the evaluation's own model of threats. A facing measure computed with the same threat model the agent
+uses would partly be grading its own homework.
+
+### How to read the result
+
+| Weak-side hits | Wins | Meaning |
+|---|---|---|
+| ↓ | ↑ | Facing matters, and a cheap evaluation term captures it. |
+| ↓ | flat | Facing matters less than assumed at this strength, or the caution costs tempo elsewhere — check declined attacks and game length. |
+| flat | any | **The term isn't working.** Debug before concluding anything: replay a game and check the approach move, the way H0 caught the Stalker. |
+| flat | ↑ | The gain came from something other than facing. Find out what before crediting H1. |
+
+### Known simplifications
+
+- **Every enemy is treated as able to strike.** In reality only two machines activate per turn, so the threat map
+  is an upper bound. That is a reasonable bias for a defensive term: over-protecting is cheaper than being hit on
+  a weak side.
+- **Enemies are considered one at a time.** Two can't end on the same square, but the map doesn't model that.
+- **This is a stand-in for search.** An alpha-beta agent would find good facing on its own by looking at the
+  reply. H1 therefore also measures how much of that value one cheap evaluation term can capture — useful to know
+  before paying for depth.
+
+### Status
+
+- [x] Designed, with success and falsification criteria written before any code or results
+- [ ] Move facing distribution and weak-side hit rate into `gameMetrics`, so H0's throwaway measurement becomes a
+      permanent instrument that H0 and H1 share
+- [ ] Next-turn threat map in the engine — which directions each machine can be struck from — with golden tests
+- [ ] `heuristic-facing` agent
+- [ ] Run the matchups
+- [ ] Watch a sample of replays: does the approach move now keep the back away from the enemy?
+- [ ] Record results and findings
+
+### Results
+
+Not yet run.
+
