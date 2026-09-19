@@ -25,7 +25,7 @@ games of this overnight" — that costs nothing in Stage 1 and would be expensiv
 | [`docs/pieces.md`](docs/pieces.md) | **43-piece stat table**, generated from the roster data |
 | [`packages/data/machines.json`](packages/data/machines.json) | Roster: stats, armor/weak facings, points, skills |
 | [`assets/terrain/`](assets/terrain/) | Your 32×32 tiles (`forrest` → `forest` corrected on import) |
-| [`assets/pieces/placeholder/`](assets/pieces/placeholder/) | Generated geometric piece sprites + contact sheet |
+| [`assets/pieces/sheet.html`](assets/pieces/sheet.html) | Piece reference sheet — both sides, every terrain |
 | [`tools/`](tools/) | Regenerators for the table and the sprites |
 
 ---
@@ -367,19 +367,37 @@ the base tile, since the underlying terrain still governs Combat Power.
   destroys pixel art.
 - Sprite-sheet them with a JSON atlas once the set is final; individual `<img>` tags are fine until then.
 
-**Pieces** — geometric placeholders are generated for all 43 machines in `assets/pieces/placeholder/`
-(`tools/gen_placeholder_pieces.py`, driven by `machines.json`). Open
-[`contact-sheet.html`](assets/pieces/placeholder/contact-sheet.html) to see them all. Convention:
+**Pieces** are drawn by one React component, `packages/web/src/board/PieceToken.tsx` — the board, the draft,
+the deploy trays and the reference sheet all render it, so there is a single source of truth for piece art.
+[`assets/pieces/sheet.html`](assets/pieces/sheet.html) shows every machine for both sides on every terrain, and
+is regenerated from that same component (`npm run pieces:sheet`), so it cannot drift from the game.
 
-- Every sprite is drawn **facing north**; the app rotates the whole sprite by the piece's facing. This is why
-  facing is a render transform, never a separate asset.
-- A **mitred frame** around the body marks each side in the piece's own frame: **blue = armored**, **red =
-  weak**, **grey = neutral**. This is the one thing the art must communicate — it drives every combat decision.
-- An **amber chevron** above the body marks the front, so facing stays readable even when the front is neutral.
-- The **centre glyph** encodes machine type: diamond = Melee, crosshair = Gunner, chevron-up = Ram, double
+**Every colour has exactly one meaning:**
+
+| Colour | Means |
+|---|---|
+| **Light gold body** | Player 1 |
+| **Dark navy body, blue rim** | Player 2 |
+| **White plate** | an armoured side |
+| **Red plate** | a weak side |
+| Near-black | outline and type glyph |
+
+That rule is the whole point. The first placeholders broke it twice — blue meant both *armoured* and *Player 2*,
+and the amber front marker was exactly Player 1's colour — while the only real team signal was a thin glow. A
+spectator watching two bots could not tell the sides apart.
+
+- **The sides differ in lightness, not just hue** — Player 1 is a light piece and Player 2 a dark one, the way
+  chess does it. Hue alone was not enough: the first redesign was indistinguishable in greyscale, which is what
+  a colour-blind player would see. Body lightness contrast is **8.5 : 1**, up from 1.7 : 1.
+- **Facing is the silhouette.** The body is a teardrop whose point is the machine's front, so no colour is
+  spent on it.
+- **Armour and weak sides** are plates in the machine's own frame, turning with it.
+- **The centre glyph** is the machine type: diamond = Melee, crosshair = Gunner, chevron-up = Ram, double
   chevron = Dash, dart = Swoop, chevron-down = Pull.
-- Ten distinct armor/weak layouts exist across the roster — a useful checklist for the facing golden tests.
-- Player colors aren't baked in; tint the body at render time.
+- **The board's home edges** are coloured too — gold along Player 1's back row, blue along Player 2's — so a
+  spectator knows which end is whose before reading a single piece.
+- Selection is a **white** glow and the Combat Power badge is **white**; both were amber, which made a selected
+  Player 2 machine look like Player 1's.
 
 Original art only — non-commercial fan reimplementation, no Guerrilla assets, credit them in the README.
 

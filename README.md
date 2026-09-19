@@ -112,7 +112,7 @@ packages/data     machine roster, board files
 packages/web      Vite + React app
 packages/ai       agents and the evaluation function
 packages/arena    headless match runner, Elo, tournaments
-assets/           32×32 terrain tiles, generated placeholder piece sprites
+assets/           32×32 terrain tiles, and the piece reference sheet
 tools/            regenerators for the boards, the stat table and the sprites
 docs/             rules spec, piece stats
 ```

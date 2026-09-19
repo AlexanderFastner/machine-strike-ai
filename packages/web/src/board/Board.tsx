@@ -1,12 +1,12 @@
 import type { CSSProperties } from "react";
 import { TERRAIN, CORRUPT_TILE, HEART_ICON, type TerrainId } from "./terrain";
-import { MACHINE_BY_ID, SPRITE } from "../data/machines";
+import { MACHINE_BY_ID } from "../data/machines";
+import { PieceToken } from "./PieceToken";
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 
-/** Facing is 4-directional. Sprites are drawn facing north, so this is a rotation. */
+/** Facing is 4-directional; PieceToken turns the piece to match. */
 export type Facing = "N" | "E" | "S" | "W";
-const ROTATION: Record<Facing, number> = { N: 0, E: 90, S: 180, W: 270 };
 
 export type PlacedPiece = {
   machineId: string;
@@ -114,12 +114,11 @@ export function Board({
                 <img className="terrain" src={t.tile} alt="" draggable={false} />
                 {blighted && <img className="terrain blight" src={CORRUPT_TILE} alt="" draggable={false} />}
                 {piece && machine && (
-                  <img
+                  <PieceToken
                     className={`piece p${piece.owner}${piece.uid === selectedUid ? " selected" : ""}`}
-                    src={SPRITE[piece.machineId]}
-                    alt={machine.name}
-                    draggable={false}
-                    style={{ transform: `rotate(${ROTATION[piece.facing]}deg)` }}
+                    machine={machine}
+                    owner={piece.owner}
+                    facing={piece.facing}
                   />
                 )}
                 {piece && machine && piece.hp !== undefined && (
@@ -134,13 +133,12 @@ export function Board({
                   </span>
                 )}
                 {ghostsHere.map((g, i) => (
-                  <img
+                  <PieceToken
                     key={`g${i}`}
                     className={`piece ghost p${g.owner}${g.fallen ? " fallen" : ""}`}
-                    src={SPRITE[g.machineId]}
-                    alt=""
-                    draggable={false}
-                    style={{ transform: `rotate(${ROTATION[g.facing]}deg)` }}
+                    machine={MACHINE_BY_ID[g.machineId]}
+                    owner={g.owner}
+                    facing={g.facing}
                   />
                 ))}
                 {badgeUid !== undefined && preview?.has(badgeUid) && (

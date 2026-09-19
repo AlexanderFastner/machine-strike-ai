@@ -1,7 +1,7 @@
+import { PieceToken } from "../board/PieceToken";
 import { useEffect, useMemo, useState } from "react";
 import { Board } from "../board/Board";
 import { parseBoard, type BoardFile } from "../board/terrain";
-import { SPRITE } from "../data/machines";
 import { PieceCard } from "./PieceCard";
 import { saveGame } from "../data/saves";
 import {
@@ -280,7 +280,7 @@ export function Game({ board, corruption, deployments, initialState, onQuit }: P
                   return (
                     <li key={p.uid}>
                       <button className="pool-item" onClick={() => selectPiece(p.uid)}>
-                        <img src={SPRITE[p.machineId]} alt="" draggable={false} />
+                        <PieceToken className="thumb" machine={m} owner={p.owner} facing={p.facing} />
                         <div>
                           <b>{m.name}</b>
                           <span className="stats">

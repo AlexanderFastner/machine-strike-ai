@@ -1,8 +1,9 @@
+import { PieceToken } from "../board/PieceToken";
 import { useState } from "react";
 import { Steps } from "./BoardSelect";
 import { Board, type PlacedPiece } from "../board/Board";
 import { parseBoard, type BoardFile } from "../board/terrain";
-import { MACHINE_BY_ID, SPRITE, type Owner, type Team } from "../data/machines";
+import { MACHINE_BY_ID, type Owner, type Team } from "../data/machines";
 
 type Props = {
   board: BoardFile;
@@ -116,7 +117,7 @@ export function Deploy({ board, teams, onDone, onBack }: Props) {
                         disabled={active !== o}
                         onClick={() => setSelected({ owner: o, i })}
                       >
-                        <img src={SPRITE[id]} alt="" draggable={false} />
+                        <PieceToken className="thumb" machine={m} owner={o} facing={o === 1 ? "N" : "S"} />
                         <div>
                           <b>{m.name}</b>
                           <span className="stats">

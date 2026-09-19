@@ -79,7 +79,7 @@ All fifteen skills are specified. They collapse into a handful of mechanisms rat
 
 ## Armor / weak patterns
 
-Ten distinct facing layouts across the roster. Each is one placeholder sprite (`assets/pieces/placeholder/`) and one row in the facing-damage golden tests.
+Ten distinct facing layouts across the roster. Each is one row in the facing-damage golden tests. See every machine drawn for both sides in [`assets/pieces/sheet.html`](../assets/pieces/sheet.html).
 
 | Armor | Weak | Neutral | Count | Example |
 |---|---|---|---|---|

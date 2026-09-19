@@ -1,4 +1,5 @@
-import { MACHINE_BY_ID, SKILL_TEXT, SPRITE, type GameState, type Piece } from "../data/machines";
+import { PieceToken } from "../board/PieceToken";
+import { MACHINE_BY_ID, SKILL_TEXT, type GameState, type Piece } from "../data/machines";
 import { TERRAIN } from "../board/terrain";
 import { combatPowerOf, isCorrupted } from "../data/machines";
 
@@ -20,7 +21,7 @@ export function PieceCard({ state, piece }: { state: GameState; piece: Piece }) 
   return (
     <aside className="card-panel">
       <header className={`card-head who p${piece.owner}`}>
-        <img src={SPRITE[m.id]} alt="" draggable={false} />
+        <PieceToken className="thumb large" machine={m} owner={piece.owner} facing={piece.facing} />
         <div>
           <b>{m.name}</b>
           <span>

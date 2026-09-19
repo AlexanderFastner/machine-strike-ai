@@ -5,6 +5,9 @@
   --text: #e6e9ed;
   --muted: #93a0ad;
   --accent: #f2c14e;
+  /* Team colours — must match TEAM in board/PieceToken.tsx. */
+  --p1: #ffc53d;
+  --p2: #4a9dff;
 
   color-scheme: dark;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -326,9 +329,8 @@ button.big { padding: 0.7rem 1.6rem; font-size: 1rem; border-radius: 10px; }
 
 .tile .terrain { position: absolute; inset: 0; }
 .tile .piece {
-  position: absolute; inset: 12%;
-  width: 76%; height: 76%;
-  image-rendering: pixelated;
+  position: absolute; inset: 5%;
+  width: 90%; height: 90%;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55));
 }
 .tile.clickable { cursor: pointer; }
@@ -337,13 +339,14 @@ button.big { padding: 0.7rem 1.6rem; font-size: 1rem; border-radius: 10px; }
 
 /* ============================= two-player + game ============================= */
 
-.who.p1 { color: #f2c14e; }
-.who.p2 { color: #6fb8f2; }
+.who.p1 { color: var(--p1); }
+.who.p2 { color: var(--p2); }
 /* Owner is read from the coloured halo, not from the sprite: the placeholder art is
    mostly neutral steel, so a hue rotation barely reads at 64px. */
-.tile .piece.p1 { filter: drop-shadow(0 0 3px #f2c14e) drop-shadow(0 1px 2px rgba(0,0,0,.7)); }
-.tile .piece.p2 { filter: drop-shadow(0 0 3px #6fb8f2) drop-shadow(0 1px 2px rgba(0,0,0,.7)); }
-.tile .piece.selected { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 4px; }
+/* Team colour is in the piece itself; this shadow just lifts it off the terrain. */
+.tile .piece { filter: drop-shadow(0 2px 2px rgba(0,0,0,.65)); }
+/* White, never a team colour: amber here made every selected P2 machine look like P1's. */
+.tile .piece.selected { filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 4px #fff) drop-shadow(0 2px 2px rgba(0,0,0,.65)); }
 
 .tile .hp {
   position: absolute; right: 1px; bottom: 1px;
@@ -500,7 +503,7 @@ button.big { padding: 0.7rem 1.6rem; font-size: 1rem; border-radius: 10px; }
   position: absolute; left: 2px; bottom: 1px;
   font-size: 0.62rem; font-weight: 700; line-height: 1;
   padding: 1px 3px; border-radius: 3px;
-  background: rgba(8, 11, 15, 0.85); color: var(--accent);
+  background: rgba(8, 11, 15, 0.85); color: #fff;
   font-variant-numeric: tabular-nums;
 }
 
@@ -692,8 +695,8 @@ button.overcharged {
   font-size: 0.8rem; line-height: 1.4; padding: 0.35rem 0.5rem;
   border-radius: 6px; background: #151b23; border-left: 3px solid var(--line);
 }
-.effect.p1 { border-left-color: #f2c14e; }
-.effect.p2 { border-left-color: #6fb8f2; }
+.effect.p1 { border-left-color: var(--p1); }
+.effect.p2 { border-left-color: var(--p2); }
 .effect.damage { color: #ffb0b0; }
 .effect.destroyed { color: #fff; background: rgba(170, 30, 30, 0.35); font-weight: 600; }
 .effect.moved, .effect.turned { color: #cfd8e3; }
@@ -753,3 +756,18 @@ button.overcharged {
   background: #151b23; color: var(--text); border: 1px solid var(--line);
 }
 code { font-size: 0.72rem; }
+
+/* ============================= piece tokens ============================= */
+
+.thumb { flex: none; overflow: visible; filter: drop-shadow(0 1px 1px rgba(0,0,0,.6)); }
+.card .thumb { width: 36px; height: 36px; }
+.picked-list .thumb { width: 26px; height: 26px; }
+.pool-item .thumb { width: 32px; height: 32px; }
+.card-head .thumb.large { width: 46px; height: 46px; }
+
+/* Each side's home edge, in its colour, so a spectator knows which end is whose
+   before reading a single piece. */
+.board {
+  border-top: 3px solid var(--p2);
+  border-bottom: 3px solid var(--p1);
+}

@@ -1,9 +1,9 @@
+import { PieceToken } from "../board/PieceToken";
 import { useState } from "react";
 import { Steps } from "./BoardSelect";
 import {
   MACHINES,
   MACHINE_BY_ID,
-  SPRITE,
   TEAM_POINTS,
   TYPE_ORDER,
   blockedReason,
@@ -52,7 +52,7 @@ export function Draft({ player, onReady, onBack }: Props) {
                       disabled={!!blocked}
                       title={blocked ?? `Add ${m.name} (${m.points} pts)`}
                     >
-                      <img src={SPRITE[m.id]} alt="" draggable={false} />
+                      <PieceToken className="thumb" machine={m} owner={player} />
                       <div className="card-body">
                         <b>{m.name}</b>
                         <span className="stats">
@@ -87,7 +87,7 @@ export function Draft({ player, onReady, onBack }: Props) {
               const m = MACHINE_BY_ID[id];
               return (
                 <li key={`${id}-${i}`}>
-                  <img src={SPRITE[id]} alt="" draggable={false} />
+                  <PieceToken className="thumb" machine={m} owner={player} />
                   <b>{m.name}</b>
                   <span className="pts">{m.points}</span>
                   <button className="remove" onClick={() => removeAt(i)} aria-label={`Remove ${m.name}`}>

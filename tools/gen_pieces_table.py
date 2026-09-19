@@ -73,8 +73,8 @@ for skill, n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])):
     out.append(f"| {skill} | {users} | {effect} |")
 
 out.append("\n## Armor / weak patterns\n")
-out.append("Ten distinct facing layouts across the roster. Each is one placeholder sprite "
-           "(`assets/pieces/placeholder/`) and one row in the facing-damage golden tests.\n")
+out.append("Ten distinct facing layouts across the roster. Each is one row in the facing-damage golden tests. "
+           "See every machine drawn for both sides in [`assets/pieces/sheet.html`](../assets/pieces/sheet.html).\n")
 out.append("| Armor | Weak | Neutral | Count | Example |")
 out.append("|---|---|---|---|---|")
 pats = defaultdict(list)
