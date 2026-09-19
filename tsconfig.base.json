@@ -1,0 +1,31 @@
+{
+  // Shared by the code that runs under Node: the AI and arena packages with their
+  // tests, the experiments, and the engine source they import. tsx strips types
+  // without checking them, so `npm run typecheck` is the only thing that checks
+  // this code. The web app has its own tsconfig, for the browser.
+  "compilerOptions": {
+    // Node 26 runs ES2024; the browser build stays at ES2022, and shared code is
+    // held to that by the web app's own check.
+    "target": "ES2024",
+    "lib": ["ES2024"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    // The workspace packages, resolved to source exactly as tsx and the web app do.
+    "paths": {
+      "@ms/engine": ["./packages/engine/src/index.ts"],
+      "@ms/ai": ["./packages/ai/src/index.ts"],
+      "@ms/arena": ["./packages/arena/src/index.ts"],
+      "@ms/arena/node": ["./packages/arena/src/node.ts"]
+    }
+  }
+}

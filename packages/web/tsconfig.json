@@ -17,6 +17,8 @@
     "isolatedModules": true,
     "noEmit": true,
     "skipLibCheck": true,
+    // Browser code: keep the root's @types/node out, so Node APIs are an error here
+    "types": [],
     "baseUrl": ".",
     "paths": {
       "@data/*": [

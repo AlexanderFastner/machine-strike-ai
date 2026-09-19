@@ -252,9 +252,16 @@ Honest list of what these tests do **not** cover.
 - [ ] **23 open rules questions** remain in [rules.md §13](rules.md#13-open-questions), each with a house rule
       standing in. The tests verify the house rules, not the real game.
 - [ ] **No UI tests.** Screens are verified by hand in the browser.
-- [ ] **The `ai` and `arena` packages are only typechecked through the web build.** `tsx` strips types without
-      checking them, so code the web app does not import — the arena CLI, the test files — is never
+- [x] **The `ai` and `arena` packages were only typechecked through the web build.** `tsx` strips types without
+      checking them, so code the web app does not import — the arena CLI, the test files — was never
       typechecked. The web build caught an unused import in the AI package the first time it pulled the package
-      in. A `typecheck` script per package would close this.
+      in. **Closed:** `npm run typecheck`, which `npm test` runs first, checks both packages with their tests,
+      and the experiments, against Node's types — and the web app against the browser's alone, so a Node API
+      reaching browser code is a type error rather than a runtime one.
+- [ ] **The engine's own tests are not typechecked.** Its source is, through every package that imports it, but
+      `packages/engine/test/` has 53 type errors: partial fixtures such as `{ type: "Melee", attack: 3 }` passed
+      as a `Machine`, unchecked nulls, implicit `any`s. None hides a bug — the fuzz test's `startingPoints`, the
+      one that looked as if it might, is stamped onto every state through a cast. `tools/piece-sheet.ts` and
+      `packages/web/vite.config.ts` are unchecked too, though both pass today.
 - [ ] **Perft depth is shallow** (2 in the committed set). Deeper counts on larger positions would catch more,
       but the tree grows too fast for the current engine to explore them in a test run.
