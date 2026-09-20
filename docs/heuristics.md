@@ -8,7 +8,9 @@ the rating looks the same either way. Each experiment therefore names what it ex
 measured, and what result would falsify it.
 
 Tooling shared by every entry: the [arena](arena.md) for ratings, and the **replay viewer and game-health
-metrics** built for H0 below.
+metrics** built for H0 below. Every interval quoted in these entries is ±1.96 standard errors on the mean of
+**pair** scores — the formula, and the two others this project uses, are in
+[arena.md](arena.md#reading-the-error-bars).
 
 ---
 

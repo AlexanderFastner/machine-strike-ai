@@ -63,6 +63,9 @@ sets, with both sides piloted by the same agent and first-move advantage cancell
 *average* over opponents, and an average can be estimated by sampling. Play a set against randomly drawn
 opponents and its measured score closes in on the true one at about ±1/√pairs, however large the field:
 
+Intervals here are Wilson score intervals over pairs; the formula, and the two others this project uses, are
+in [arena.md](arena.md#reading-the-error-bars).
+
 | Pairs per set | 95% interval, for a set near 50% |
 |---|---|
 | 5 | ±33 points |

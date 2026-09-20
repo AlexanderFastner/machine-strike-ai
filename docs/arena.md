@@ -101,6 +101,58 @@ both sides' arrangements, so two arrangements can never be mistaken for one game
 all results at once, anchored so `random` = 0, with draws counting half. Agents that score 0% or 100% are
 flagged: a clean sweep says the gap is large, not how large.
 
+## Reading the error bars
+
+Three intervals appear in this project, computed three different ways, because they are asked three different
+questions. Every number quoted with a ± or a range comes from one of these.
+
+**1. Experiment matchups** — H0, H1, H1b, H2, and anything in `experiments/`. A normal interval on the mean of
+**pair** scores, since the two games of a pair share a seed and an opponent and are not independent of each
+other:
+
+```
+score  = mean(pairScores)                     each pair scores 0, ¼, ½, ¾ or 1
+sd     = sample standard deviation of pairScores, with n − 1 in the denominator
+half   = 1.96 × sd / √n                       n = number of pairs, not games
+interval = [score − half, score + half]       clamped to [0, 1]
+```
+
+So "46.5% (39.5 – 53.5%)" over 200 games means 100 pairs, a sample standard deviation across those 100 pair
+scores, and ±1.96 standard errors. It is a *t*-free approximation: at n = 100 the difference from a *t*
+interval is under 2% of the half-width, and no entry has fewer than 50 pairs.
+
+**2. Set leaderboards** — `arena report sets`, in [results.md](results.md). A **Wilson score interval**, again
+with the pair as the unit:
+
+```
+d      = 1 + z²/n
+centre = (p + z²/2n) / d
+half   = z × √( p(1−p)/n + z²/4n² ) / d
+interval = [centre − half, centre + half]     z = 1.96
+```
+
+Wilson rather than the normal interval because a leaderboard is full of sets measured over a handful of pairs,
+often at 0% or 100%, where the normal interval runs past the ends of the scale or collapses to ±0. Wilson never
+does either. A pair's score lies in [0, 1], so its variance is at most p(1−p) whatever the correlation inside
+the pair, which makes this interval conservative rather than optimistic.
+
+**3. Elo ratings** — the ladder below. The standard error on the agent's overall score rate, pushed through the
+slope of the logistic curve at that rate:
+
+```
+se     = √( max(p(1−p), 1/4n) / n )           n = games; the floor keeps a clean sweep finite
+slope  = 400 / (ln 10 × max(p(1−p), 0.01))    Elo points per unit of score rate
+margin = 1.96 × se × slope                    capped at ±999
+```
+
+The slope is why Elo error bars widen near 0% and 100%: the same uncertainty in score rate is worth far more
+rating points out there. An agent that scored 0% or 100% is flagged rather than rated — its interval is a
+bound, not a measurement.
+
+All three use z = 1.96, the two-sided 95% normal quantile. The code is `matchup()` in each experiment's
+`run.ts`, `wilson()` in [report.ts](../packages/arena/src/report.ts), and `fitElo()` in
+[elo.ts](../packages/arena/src/elo.ts).
+
 ## The agents
 
 | Agent | What it does |
@@ -222,6 +274,26 @@ set starts is worth something even to an agent that looks one activation ahead, 
 the ground — and that is an average over random arrangements, so the best ones are presumably worth more. This
 was a first look, not a registered experiment, but it is the case for searching for better starting positions,
 board by board.
+
+### Facing is real, and small: being hit on a weak side costs about four points
+
+Three experiments priced the evaluation's facing term from every side, and the number that settles it is a
+control from [H2](heuristics.md#h2--weights-for-a-term-that-now-fires-constantly). An agent with **no facing
+term at all** takes **44.5%** of its hits on a weak side — nearly double plain `heuristic`'s 23.6%, five times
+what the facing-aware agent allows — and still scores **46.0%** (39.7 – 52.3) against `heuristic`. Doubling how
+often you are hit where it hurts most is worth about **four points of score**.
+
+That one number explains the whole line. [H1](heuristics.md#h1--facing-aware-evaluation) built a next-turn
+threat map: it worked, cutting weak-side hits from 30.6% to 10.7%, and lost at 28.0%.
+[H1b](heuristics.md#h1b--facing-for-own-machines-only) found half of it was imaginary — guarding an enemy's
+weak side, which that enemy turns away from before you move again — and recovered twenty points, to level.
+H2 then found the weights were already the best of six scales tried. Each entry removed one explanation, and
+what they leave is that the term measures something real and small. In a game that ends in five rounds, where
+an Attack-4 machine one-shots most cheap machines, **striking first decides more than being struck well.**
+
+The practical consequence: the next gain is depth, not another term (plan.md phase 5). And the same one-line
+scale that H2 used would price every other weight the same way — cheap, and worth knowing before anyone tunes
+them.
 
 ### The branching factor is ~230–290 activations per decision
 
