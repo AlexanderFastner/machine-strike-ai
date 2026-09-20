@@ -800,8 +800,77 @@ Recorded so the surprises are visible as surprises:
 
 ### Status
 
-- [ ] Designed, with the hypotheses and the instrument check written before any code or results
-- [ ] A scale per term in the evaluation, and the options that reach it
-- [ ] Runner
-- [ ] Run it
-- [ ] Record results and findings
+- [x] Designed, with the hypotheses and the instrument check written before any code or results
+- [x] A scale per term in the evaluation, and the options that reach it
+- [x] Runner
+- [x] Run it — 3,200 games, 0 replay problems
+- [x] Record results and findings
+
+### Results
+
+**The instrument check passes:** an agent that cannot see victory points scores **17.0%** (12.1 – 21.9). So the
+rest of the run counts.
+
+**Two terms carry the evaluation and the other five are nearly free.** Measured at commit `1e3a982`; full tables
+in [`experiments/h3-term-prices/results.md`](../experiments/h3-term-prices/results.md). Every interval is
+±1.96·sd/√n over pair scores ([arena.md](arena.md#reading-the-error-bars)).
+
+| Term | Off (`=0`) | Doubled (`=2`) | What removing it costs |
+|---|---|---|---|
+| `vp` | **17.0%** (12.1 – 21.9) | 50.0% — *changed no game* | **33 points** |
+| `health` | **22.0%** (16.7 – 27.3) | 55.0% (49.7 – 60.3) | **28 points** |
+| `terrain` | 44.0% (37.1 – 50.9) | 52.0% (45.6 – 58.4) | 6 points |
+| `facing` | 46.0% (39.7 – 52.3) | 47.0% (42.6 – 51.4) | 4 points |
+| `threat` | 49.0% (44.2 – 53.8) | 51.5% (45.8 – 57.2) | 1 point |
+| `advance` | 49.0% (42.6 – 55.4) | 55.5% (48.8 – 62.2) | 1 point |
+| `blight` | 49.5% (48.5 – 50.5) | 50.0% — *changed no game* | ½ point |
+
+Terrain check, on the two boards chosen before the run:
+
+| Term | Mountains | Coastal |
+|---|---|---|
+| `terrain=0` | 39.0% (29.6 – 48.4) — costs 11 | 51.0% (41.1 – 60.9) — costs nothing |
+| `threat=0` | **69.0%** (60.7 – 77.3) — **gains 19** | 50.0% (42.6 – 57.4) — costs nothing |
+
+Hypotheses, as registered: **1 ✓** (vp catastrophic), **2 ✓** (health next), **3 ✓** (terrain real, and dearer on
+Mountains), **4 ✗** (advance was supposed to cost more than it looks; it costs a point), **5 ✓** (facing and
+blight cheap), **6 ✗** — two terms appear to *gain* from doubling, though neither interval is clear of 50%.
+
+### Findings
+
+**1. The evaluation is two terms wearing five more as decoration.** Victory points are worth 33 points of score
+and health 28; nothing else reaches 7. A one-activation agent is, near enough, a material counter — which is
+exactly what `greedy` is, and `heuristic` beats `greedy` 74–26, so the decoration is not worthless. But it is
+priced in single digits, and that is the backdrop for H1, H1b and H2 all failing to find wins in the facing
+term. There were not many wins there to find.
+
+**2. The threat term is actively harmful on Mountains — worth 19 points.** Switching it off scores **69.0%**
+(60.7 – 77.3), the largest effect any entry here has produced, and in the direction nobody looks for: a term
+that costs its own agent nineteen points. The likely mechanism is a fight between weights. `threatened` is a
+flat −5 for standing in an enemy's reach, while high ground is worth `terrain` × the tile's modifier — +12 on a
+mountain. On a board made of high ground, the agent is being paid to abandon the squares that win the game,
+because something can reach them. That is a hypothesis, formed after the fact; it is the next thing to test.
+
+**3. Two weights look too low: health and advance.** Doubling health scores 55.0% (49.7 – 60.3) and doubling the
+advance pull 55.5% (48.8 – 62.2). Both intervals still touch 50%, so **neither is established** — this is the
+kind of near-miss that a fourteen-measurement run is expected to produce by chance, which is why the design
+refused to select anything. Both deserve a confirmation entry on fresh seeds before anyone believes them.
+
+**4. The blight term is free to delete, and a scale that changes nothing says so exactly.** `blight=2` and
+`vp=2` each produced 50.0% with a zero-width interval — the signature of two agents that play identically, since
+every pair splits 1–1. Checked directly rather than inferred: both play **40 of 40** games identically to plain
+`heuristic`, and `blight=0` plays 39 of 40. H0 found the blight never arrives in a five-round game; this prices
+that at half a point. `vp=2` changing nothing is a different story: victory points already dominate every
+comparison they enter, so multiplying them cannot change an ordering.
+
+**5. `facing=0` reproduces H2's number exactly.** 46.0% here, 46.0% there, on the same seeds through a different
+runner — a consistency check on the two experiment harnesses rather than new evidence.
+
+### Candidates this surfaced
+
+- **H4 — the threat term on high ground.** Confirm finding 2 on fresh seeds, then test whether it is the −5 flat
+  penalty fighting the terrain bonus, by scaling `threatened` alone rather than the pair.
+- **Confirm the two underweights.** `health=2` and `advance=2` on fresh seeds, as their own entry, since H3
+  refused to select them.
+- **Delete `inBlight`,** or keep it only for games that reach the blight. It costs half a point and the
+  evaluation is shorter without it.
