@@ -725,3 +725,83 @@ past which it stops buying decisions.
   `threatening`, or on `terrain`, would say what each term is actually worth. Cheap, and it would tell us which
   terms a tuner should bother with.
 - **Why a quarter scale is worst.** Finding 3, if it survives a confirmation run.
+
+---
+
+## H3 — What each term is worth
+
+**Question.** [H2](#h2--weights-for-a-term-that-now-fires-constantly) priced one term by switching it off: an
+agent with no facing scoring takes nearly double the weak-side hits and loses about four points of score. Every
+other weight in the evaluation was hand-guessed the same way and has never been priced at all. What is each one
+actually worth?
+
+**Why now.** The evaluation has seven groups of weights and one of them has been measured. Before anyone tunes
+them — the plan's Texel-style regression (plan.md §5) — or carries them into a deeper search, it is worth
+knowing which ones carry the agent and which are decoration. It is also the cheapest experiment left: the
+machinery is the scale H2 already added, widened from one term to all of them.
+
+### The change — one knob per term
+
+`evaluate.ts` takes a scale per **term group**, defaulting to 1, so a term can be switched off or amplified
+without touching the rest:
+
+| Term | Weights | What it says |
+|---|---|---|
+| `vp` | `victoryPoint` 100 | Victory points, the win condition |
+| `health` | `health` 6 | Health, scaled by what the machine is worth |
+| `terrain` | `terrain` 4 | Where a machine stands — the defender's whole Combat Power |
+| `threat` | `threatened` −5, `threatening` 3 | Who is in whose reach right now |
+| `facing` | `weakSideExposed` −8, `armourPresented` 4 | Which side is turned toward the threat |
+| `blight` | `inBlight` −25 | Standing in corruption |
+| `advance` | `advance` 1 | The pull toward the enemy that stops agents shuffling |
+
+Written as `heuristic:terrain=0` or `heuristic:threat=2`; `w=` stays as the alias for `facing=` that H2 used.
+
+### Method
+
+- **Each term at 0**, one at a time, against plain `heuristic`: 100 pairs (200 games), seeds 1–100, Plains and
+  Forests, standard team, corruption on. The cost of a term is 50% minus that score.
+- **Each term at 2**, the same way — a term can be priced too low as easily as too high.
+- **Terrain check** on `terrain` and `threat` at 0, on Mountains and Coastal, 50 pairs each. Chosen before the
+  run because those boards differ in exactly what the `terrain` term scores, with `threat` as the contrast; not
+  chosen after seeing which terms mattered.
+- **Fixed:** the default deployment rule, arena defaults otherwise.
+
+Intervals are ±1.96·sd/√n over pair scores, the experiment formula in
+[arena.md](arena.md#reading-the-error-bars).
+
+### Metrics
+
+| Metric | What it measures | Reported as | Falsified if |
+|---|---|---|---|
+| **Cost of each term** (14 measurements) | What the evaluation loses without it, or with twice as much of it | score against `heuristic`, with its interval | — |
+| **A term is worth something** | — | its interval excludes 50% | — |
+| **One term costs more than another** | — | only claimed when their intervals don't overlap | — |
+| **`vp=0` is catastrophic** | That the instrument works at all | *expected far below 50%* | **if `vp=0` scores near 50%, the run is broken** and nothing else in it is evidence |
+| Weak-side hits, rounds, declines | Whatever each term changes about the shape of a game | *reported* | — |
+
+**No term is selected and nothing is confirmed**, because nothing is being chosen: this entry measures fourteen
+things and reports fourteen numbers. That is also its weakness — fourteen intervals at 95% will contain roughly
+one that looks real and isn't, which is why an ordering between two terms is only claimed when their intervals
+are clear of each other.
+
+### Hypotheses, written before the run
+
+Recorded so the surprises are visible as surprises:
+
+1. `vp=0` is catastrophic — it is the win condition.
+2. `health=0` is the next most expensive: material is most of what a one-ply agent can see.
+3. `terrain=0` costs real points, since terrain is the defender's entire Combat Power, and costs **more on
+   Mountains** than on Plains.
+4. `advance=0` costs more than it looks: H0 found agents that cannot see a capture just shuffle.
+5. `facing=0` and `blight=0` cost little — H2 priced facing at about four points, and H0 found the blight
+   never arrives in a five-round game.
+6. Nothing gains from being doubled.
+
+### Status
+
+- [ ] Designed, with the hypotheses and the instrument check written before any code or results
+- [ ] A scale per term in the evaluation, and the options that reach it
+- [ ] Runner
+- [ ] Run it
+- [ ] Record results and findings
