@@ -575,3 +575,85 @@ Not scheduled — listed so they aren't lost:
   machines activate per turn. That over-caution is the remaining suspect, and it would cut the term's cost too.
 - **Why Mountains and Coastal punish it.** Worth watching replays there: the agent may be turning down high
   ground to keep its facing.
+
+---
+
+## H2 — Weights for a term that now fires constantly
+
+**Question.** The facing term scores **−8** for a weak side exposed and **+4** for an armoured one. Those numbers
+were hand-set for a term that fired only when an enemy could already reach. It now fires for every direction a
+blow could come from next turn. At what scale, if any, does it start winning games rather than merely preventing
+weak-side hits?
+
+**Background.** [H1b](#h1b--facing-for-own-machines-only) left the term **free but not profitable**: level with
+plain `heuristic` on Plains and Forests (50.5%, 44.3 – 56.7), behind it on Mountains (38.0%) and Coastal (31.0%),
+while cutting weak-side hits from ~25% to 5.6 – 13.2%. The term sees something real and the agent does not
+convert it. Weights are the obvious suspect: a term that fires perhaps once a game and a term that fires on every
+machine every turn do not want the same numbers. Both H1 and H1b named this as the next entry, and deliberately
+left it alone so the two effects could be told apart.
+
+### The change — one variable
+
+`evaluate.ts` gains a scale on the two facing weights, applied to both so their **2:1 ratio is untouched**:
+`weakSideExposed × k` and `armourPresented × k`. Nothing else moves. `k = 1` is exactly H1b's agent, and `k = 0`
+removes facing scoring altogether — with the next-turn term, that leaves an agent with no facing term at all,
+which is worth knowing on its own.
+
+Written as `heuristic-facing-own:w=<k>`, so any scale can be run from the command line.
+
+### Method
+
+Two stages, because a search that picks its own winner cannot also be the evidence for it.
+
+- **Search.** `k ∈ {0, 0.25, 0.5, 1, 2, 4}`, each against plain `heuristic`, 100 pairs (200 games), seeds 1–100,
+  Plains and Forests, standard team, corruption on. **These numbers select a candidate. They are not evidence
+  for it** — the best of six noisy measurements flatters itself, which is the winner's curse
+  ([results.md](results.md#successive-halving)).
+- **Confirmation.** The selected `k`, and `k = 1` beside it, against plain `heuristic` on **fresh seeds
+  1001–1100** (100 pairs each), plus the two head to head over the same fresh seeds. Nothing here shares a game
+  with the search.
+- **Terrain check.** The selected `k` against `heuristic` on Mountains and Coastal, 50 pairs each, fresh seeds —
+  reported, not selected on. H1b lost on both, and a weight that only helps on one board is worth knowing about.
+- **Fixed:** the default deployment rule for both sides, arena defaults otherwise.
+
+### Metrics
+
+Registered before the code exists. A miss is reported as a miss.
+
+| Metric | What it measures | Success | Falsified if |
+|---|---|---|---|
+| **Confirmation: selected `k` vs `heuristic`** (primary) | Whether rescaling makes the term profitable | lower bound above **50%** | the interval includes 50% or sits below it |
+| **Confirmation: selected `k` vs `k = 1`** | Whether the win is the rescaling rather than the term | lower bound above **50%** | *reported* |
+| **`k = 0` vs `heuristic`** | Whether any facing scoring beats none at all | *reported* — the control that says whether this whole line is worth its cost | — |
+| **Weak-side hits across the grid** | The trade the scale is buying | *reported*; expected to climb as `k` falls | — |
+| Attacks declined, game length, first attack | H1's tempo symptoms, across the grid | *reported* | — |
+| Decisions per second | Unchanged by weights; a check that nothing else moved | *reported* | — |
+
+### How to read the result
+
+| Confirmation vs `heuristic` | Meaning |
+|---|---|
+| ↑ | The weights were the problem. The term was right all along and priced wrong — and the same question now applies to every other weight. |
+| flat | The term is worth about what it costs at any scale: it prevents the hits it claims and they are not what decides these games. Facing goes back in the queue behind search. |
+| ↓ | The search found noise. Report it as noise, and treat the grid's own table as the reminder of why the confirmation stage exists. |
+
+A flat result with `k = 0` also flat would be the strongest statement available here: that at one activation of
+lookahead, facing scoring of any kind is not what wins.
+
+### Known simplifications
+
+- **The 2:1 ratio is fixed.** Only the scale moves. Tuning weak against armour is a second variable and belongs
+  in its own entry — which is what H1 said about this one.
+- **The rest of the evaluation is untouched**, though the same argument applies to `threatened` / `threatening`.
+- **Tuned against one opponent.** A scale that beats `heuristic` need not beat a stronger agent; the terrain
+  check and the `greedy` figure are the only breadth here.
+- **This is a grid, not tuning.** Six points, one dimension, chosen by hand. Real weight tuning is the plan's
+  Texel-style regression over self-play outcomes (plan.md §5, rung 2), and wants a stronger agent than this.
+
+### Status
+
+- [ ] Designed, with success and falsification criteria written before any code or results
+- [ ] `facingScale` in the evaluation, and `:w=<k>` on any agent that uses it
+- [ ] Runner for the search, the confirmation and the terrain check
+- [ ] Run them
+- [ ] Record results and findings
