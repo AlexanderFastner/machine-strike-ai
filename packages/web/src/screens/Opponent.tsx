@@ -21,7 +21,7 @@ const ABOUT: Record<string, string> = {
   greedy: "Takes the most it can get from one activation — damage and points, minus what it costs. Blind to your reply.",
   heuristic: "Weighs position, terrain and facing as well as material, one activation deep. The strongest here.",
   "heuristic-facing": "Heuristic, guarding its facing against where blows could come from next turn. Takes a third of the weak-side hits — and loses to plain heuristic anyway.",
-  "heuristic-facing-own": "The same idea with the half that guards *your* facing dropped. Level with heuristic, and twenty points better than the version above.",
+  "heuristic-facing-own": "The same, minus the half that hunted your weak sides — you would only turn away before it struck. Level with heuristic, and twenty points better than the version above.",
   anti: "Deliberately plays the move its evaluation likes least. A control, not an opponent.",
 };
 
