@@ -110,6 +110,7 @@ flagged: a clean sweep says the gap is large, not how large.
 | `heuristic` | One activation deep, scored by the full evaluation: material, terrain, facing exposure, threat, blight. |
 | `anti` | Deliberately picks the *worst* option by that evaluation. Not a contender — a control. |
 | `heuristic-facing` | `heuristic` with facing scored against next-turn threats. The subject of [H1](heuristics.md#h1--facing-aware-evaluation) — it takes far fewer weak-side hits and loses to `heuristic`. |
+| `heuristic-facing-own` | The same, with the half that guards *enemy* facing dropped. [H1b](heuristics.md#h1b--facing-for-own-machines-only) — level with `heuristic` on Plains and Forests, behind it on Mountains and Coastal. |
 
 `anti` earns its place. If the ladder were measuring noise rather than skill, it would not sit clearly at the
 bottom; that it does is evidence the instrument works.

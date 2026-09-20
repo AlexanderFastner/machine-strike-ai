@@ -495,8 +495,83 @@ miss; the thresholds don't get re-derived.
 
 ### Status
 
-- [ ] Designed, with success and falsification criteria written before any code or results
-- [ ] `heuristic-facing-own` agent, and the one-line evaluation option behind it
-- [ ] Runner for the matchups above
-- [ ] Run them
-- [ ] Record results and findings
+- [x] Designed, with success and falsification criteria written before any code or results
+- [x] `heuristic-facing-own` agent, and the one-line evaluation option behind it
+- [x] Runner for the matchups above
+- [x] Run them — 1,200 games, 0 replay problems
+- [x] Record results and findings
+
+### Results
+
+**H1b misses its primary criterion, narrowly — and the controls registered beside it make the case the primary
+could not.** Dropping the enemy half is worth about twenty points against a common opponent.
+
+Measured at commit `38364af`, which holds the implementation and these notes as they stood before the run. Full
+per-agent tables: [`experiments/h1b-own-facing/results.md`](../experiments/h1b-own-facing/results.md),
+regenerated with `node --import tsx experiments/h1b-own-facing/run.ts`.
+
+| Criterion | Registered | Result | Verdict |
+|---|---|---|---|
+| **Score vs `heuristic-facing`** (primary) | lower bound above 50% | **56.0%** (48.9 – 63.1%) | **Missed** — the bound falls 1.1 points short |
+| **Score vs `heuristic`** | lower bound above 50%; reported either way | **50.5%** (44.3 – 56.7%), where `heuristic-facing` scores **30.0%** (23.6 – 36.4%) | Missed, but the line has stopped losing |
+| **Weak-side hits suffered** | below 20% | **5.6 – 13.2%** across every matchup, against `heuristic`'s 24.5 – 28.7% | Met |
+| **Score vs `greedy`** | at least the re-measured control | **72.5%** (66.4 – 78.6%) against the control's **77.0%** (71.2 – 82.8%) | Below it, intervals overlapping — not *clearly* below |
+
+Reported, not scored, all against plain `heuristic` on Plains and Forests:
+
+| Guard | `heuristic-facing-own` | `heuristic-facing` | `heuristic` |
+|---|---|---|---|
+| Attacks declined per game | 4.5 | 4.6 | 3.9 – 4.1 |
+| Game length | 5.6 rounds | 5.7 rounds | — |
+| First attack | round 2.3 | round 2.5 | — |
+| Facing on approach — forward / sideways / backward | 71% / 27% / 2% | 69% / 27% / 4% | 26–28% / 46–49% / 25–26% |
+| Decisions per second | 22–27 | 23–24 | 138–160 |
+
+Terrain check, against plain `heuristic`:
+
+| Board | Score | Weak-side hits: own / plain |
+|---|---|---|
+| Plains and Forests | 50.5% (44.3 – 56.7%) | 8.4% / 24.5% |
+| Mountains | 38.0% (28.1 – 47.9%) | 13.2% / 24.9% |
+| Coastal | 31.0% (22.2 – 39.8%) | 6.6% / 26.9% |
+
+### Findings
+
+**1. The enemy half was costing about twenty points — shown by the controls, not by the primary.** Against a
+common opponent, in the same run and on the same seeds, `heuristic-facing` scores **30.0%** (23.6 – 36.4) and
+`heuristic-facing-own` scores **50.5%** (44.3 – 56.7). Those intervals are nowhere near each other. Played
+directly against one another the same two agents differ by far less — 56.0%, an interval that reaches 48.9% —
+so the registered primary settles nothing on its own. Both comparisons point the same way and disagree about
+size: two cautious agents appear to blunt each other, and neither presses the advantage its reasoning buys.
+That is an observation about the measurement, not an explanation, and it is the reason the controls earned
+their place in the design.
+
+**2. The gain was not tempo.** H1's reading was that caution costs time. But H1b declines almost exactly as many
+attacks as H1 did (4.5 against 4.6 per game), makes first contact no sooner (round 2.3 against 2.5), and plays
+games of the same length (5.6 rounds against 5.7). The tempo symptoms barely moved while the score moved twenty
+points. What the enemy half cost was not time but **direction**: it aimed moves at weak sides the opponent
+could simply turn away from before this agent moved again — which is what the hypothesis said, and not what
+H1's own explanation of the loss said.
+
+**3. Facing-awareness is now free rather than costly, and still not profitable.** Level with plain `heuristic`
+on Plains and Forests, for roughly six times the thinking time. The whole of H1's deficit was the enemy half;
+what remains is a term that buys a large, real reduction in weak-side hits and no wins.
+
+**4. Terrain decides whether it is worth anything.** Level on Plains, clearly behind on Mountains (38.0%) and
+Coastal (31.0%). The term is working on those boards — weak-side hits are just as low, 13.2% and 6.6% — so
+where height or marsh dominates position, guarding facing is worth less than what it costs. H1 measured the
+opposite pattern, but under the previous deployment rule, so the two cannot be compared.
+
+**5. The weak-side result from H1 holds.** 5.6 – 13.2% of blows land on a weak side, against 24.5 – 28.7% for
+plain `heuristic`, and backward facing on approach moves stays at 2 – 5% against 25 – 26%.
+
+### Candidates this surfaced
+
+Not scheduled — listed so they aren't lost:
+
+- **Rescale the facing weights.** Now the obvious next entry, and the one H1 already named: the term is free at
+  −8 / +4, so the question is whether weights chosen for a term that fires constantly can make it profitable.
+- **Model who can actually strike.** The threat map treats every enemy as able to reach, though only two
+  machines activate per turn. That over-caution is the remaining suspect, and it would cut the term's cost too.
+- **Why Mountains and Coastal punish it.** Worth watching replays there: the agent may be turning down high
+  ground to keep its facing.
