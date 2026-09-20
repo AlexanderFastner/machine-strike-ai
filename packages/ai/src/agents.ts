@@ -77,6 +77,26 @@ export const HeuristicFacingAgent: Agent = {
 };
 
 /**
+ * H1b: `heuristic-facing` with the enemy half of its facing term dropped. It
+ * guards its own machines against next-turn threats and says nothing about the
+ * enemy's — whose weak side, the argument goes, is one they can turn away from
+ * before this agent moves again (heuristics.md, H1b).
+ */
+export const HeuristicFacingOwnAgent: Agent = {
+  name: "heuristic-facing-own",
+  choose(state, rng) {
+    const acts = legalActivations(state);
+    if (!acts.length) return null;
+    const me = state.turn;
+    return argmaxRandom(
+      acts,
+      (a) => evaluate(applyActivation(state, a), me, { facing: "next-turn-own" }),
+      rng,
+    );
+  },
+};
+
+/**
  * Deliberately awful: always takes the option the heuristic likes least.
  * Not a contender — a control. If the ladder is measuring anything real, this
  * has to sit clearly below random.
@@ -118,6 +138,7 @@ export const AGENTS: Record<string, Agent> = {
   greedy: GreedyAgent,
   heuristic: HeuristicAgent,
   "heuristic-facing": HeuristicFacingAgent,
+  "heuristic-facing-own": HeuristicFacingOwnAgent,
   aggressive: AggressiveAgent,
   anti: AntiAgent,
 };

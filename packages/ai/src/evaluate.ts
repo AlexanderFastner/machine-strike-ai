@@ -39,10 +39,15 @@ function sideToward(defender: Piece, attacker: Piece): "F" | "B" | "L" | "R" {
  *  - "current":   enemies whose reach *from where they stand* covers the machine.
  *                 Blind to anything that has to move first — nearly every blow
  *                 that actually lands (heuristics.md, H0 finding 2).
- *  - "next-turn": every direction an enemy could strike from after moving (H1).
- * Nothing else in the evaluation differs between the two.
+ *  - "next-turn": every direction an enemy could strike from after moving (H1),
+ *                 scored for both sides' machines.
+ *  - "next-turn-own": the same map, scored only for the agent's own machines
+ *                 (H1b) — an enemy's exposed weak side is one it can turn away
+ *                 from before this agent moves again, so it is a threat that
+ *                 mostly isn't there.
+ * Nothing else in the evaluation differs between them.
  */
-export type EvalOptions = { facing: "current" | "next-turn" };
+export type EvalOptions = { facing: "current" | "next-turn" | "next-turn-own" };
 
 export function evaluate(
   s: GameState,
@@ -107,12 +112,13 @@ export function evaluate(
     }
   }
 
-  if (opts.facing === "next-turn") {
-    // Same weights, same symmetry as the "current" term — scored for both
-    // sides' machines — but one term per direction a blow could come from next
-    // turn, rather than per enemy that can already reach.
+  if (opts.facing !== "current") {
+    // Same weights as the "current" term, but one term per direction a blow
+    // could come from next turn, rather than per enemy that can already reach.
+    const mineOnly = opts.facing === "next-turn-own";
     const strikes = strikeDirections(s);
     for (const victim of s.pieces) {
+      if (mineOnly && victim.owner !== me) continue;
       const vm = MACHINE_BY_ID[victim.machineId];
       for (const dir of strikes.get(victim.uid)!) {
         const side = sideHitBy(victim.facing, dir);
