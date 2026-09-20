@@ -3,6 +3,7 @@ import {
   type Activation, type GameState, type Owner,
 } from "@ms/engine";
 import { argmaxRandom, pick, type Agent } from "./agent";
+import { RandomDeployer, fixedDeployer, withDeployer } from "./deploy";
 import { evaluate } from "./evaluate";
 
 /** The floor. Anything that cannot beat this is broken, not merely weak. */
@@ -121,10 +122,24 @@ export const AGENTS: Record<string, Agent> = {
   anti: AntiAgent,
 };
 
-export const agentByName = (name: string): Agent => {
-  const a = AGENTS[name];
-  if (!a) throw new Error(`Unknown agent "${name}". Known: ${Object.keys(AGENTS).join(", ")}`);
-  return a;
+/**
+ * An agent by name, with options after colons: `heuristic`, `heuristic:deploy=random`,
+ * `greedy:deploy=burrower@b1N+clawstrider@c1N+…`. `deploy` takes `random`, an
+ * arrangement key (deploy.ts), or `centred` — the arena's default rule, which is
+ * simply the plain agent.
+ */
+export const agentByName = (spec: string): Agent => {
+  const [name, ...options] = spec.split(":");
+  let agent = AGENTS[name];
+  if (!agent) throw new Error(`Unknown agent "${name}". Known: ${Object.keys(AGENTS).join(", ")}`);
+  for (const option of options) {
+    const [key, value] = [option.slice(0, option.indexOf("=")), option.slice(option.indexOf("=") + 1)];
+    if (key !== "deploy" || !option.includes("=") || !value)
+      throw new Error(`Unknown option "${option}" in "${spec}". Known: deploy=centred|random|<arrangement>.`);
+    if (value === "centred") agent = AGENTS[name];
+    else agent = withDeployer(agent, value === "random" ? RandomDeployer : fixedDeployer(value));
+  }
+  return agent;
 };
 
 export { MACHINE_BY_ID };

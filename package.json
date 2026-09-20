@@ -13,7 +13,7 @@
     "typecheck": "tsc -p packages/engine && tsc -p packages/ai && tsc -p packages/arena && tsc -p experiments && tsc -p packages/web",
     "test": "npm run typecheck && npm run test -w @ms/engine && npm run test -w @ms/arena",
     "test:fuzz:deep": "npm run test:fuzz:deep -w @ms/engine",
-    "arena": "tsx packages/arena/src/cli.ts",
+    "arena": "node --import tsx packages/arena/src/cli.ts",
     "pieces:sheet": "tsx --tsconfig packages/web/tsconfig.json tools/piece-sheet.ts"
   },
   "devDependencies": {

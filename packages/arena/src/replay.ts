@@ -1,12 +1,13 @@
 import {
-  MACHINE_BY_ID, VP_TO_WIN, checksum, corruptedTiles, endActivation, endTurn,
-  legalActivations, movePiece, other, resolveActivation, rotatePiece, sameActivation,
-  sideHitBy, targetOf,
-  type Activation, type BoardFile, type GameState, type Owner, type Piece,
+  MACHINE_BY_ID, VP_TO_WIN, checksum, corruptedTiles, deploymentProblems, endActivation, endTurn,
+  legalActivations, movePiece, newGame, other, parseBoard, resolveActivation, rotatePiece, sameActivation,
+  sideHitBy, squareName, targetOf,
+  type Activation, type BoardFile, type Deployment, type GameState, type Owner, type Piece,
 } from "@ms/engine";
 import type { Agent } from "@ms/ai";
 import { runGame, type GameResult } from "./match";
-import { startPosition, type MatchSetup } from "./setup";
+import { setKey } from "./sets";
+import { chooseDeployment, defaultDeployment, type MatchSetup } from "./setup";
 
 // ---------------------------------------------------------------------------
 // Recording
@@ -29,32 +30,52 @@ export type ReplayStep = {
   checksum: string;
 };
 
+/**
+ * Version 2 records each side's set, since the two can now differ, and where
+ * every machine started, since agents can choose. Version 1 files recorded one
+ * shared set under the old deployment rule, so they would no longer re-execute;
+ * regenerate them from their seed instead.
+ */
+export const REPLAY_VERSION = 2;
+
 export type Replay = {
-  version: 1;
+  version: typeof REPLAY_VERSION;
   seed: number;
   agents: Record<Owner, string>;
-  setup: { board: BoardFile; team: string[]; corruption: boolean };
+  setup: { board: BoardFile; teams: Record<Owner, string[]>; corruption: boolean; deployment: Deployment[] };
   initialChecksum: string;
   steps: ReplayStep[];
   result: GameResult;
 };
 
-export function recordGame(p1: Agent, p2: Agent, setup: MatchSetup, seed: number): Replay {
+export function recordGame(
+  p1: Agent,
+  p2: Agent,
+  setup: MatchSetup,
+  seed: number,
+  deployment: Deployment[] = chooseDeployment(p1, p2, setup, seed),
+): Replay {
   const steps: ReplayStep[] = [];
   let initialChecksum = "";
-  const result = runGame(p1, p2, setup, seed, {
-    start: (s) => {
+  const hooks = {
+    start: (s: GameState) => {
       initialChecksum = checksum(s);
     },
-    step: (before, after, activation, optionCount) => {
+    step: (before: GameState, after: GameState, activation: Activation | null, optionCount: number) => {
       steps.push({ player: before.turn, round: before.round, optionCount, activation, checksum: checksum(after) });
     },
-  });
+  };
+  const result = runGame(p1, p2, setup, seed, hooks, deployment);
   return {
-    version: 1,
+    version: REPLAY_VERSION,
     seed,
     agents: { 1: p1.name, 2: p2.name },
-    setup: { board: setup.board, team: [...setup.team], corruption: setup.corruption },
+    setup: {
+      board: setup.board,
+      teams: { 1: [...setup.teams[1]], 2: [...setup.teams[2]] },
+      corruption: setup.corruption,
+      deployment: deployment.map((d) => ({ ...d })),
+    },
     initialChecksum,
     steps,
     result,
@@ -78,17 +99,22 @@ export type Frame = {
 };
 
 export function rebuild(replay: Replay): Frame[] {
-  let s = startPosition({ ...replay.setup });
+  // Straight from the recorded deployment, never by asking the agents again: a
+  // replay has to stand on its own, and an illegal deployment is reported like
+  // any other problem rather than thrown.
+  const { board, teams, corruption, deployment } = replay.setup;
+  const grid = parseBoard(board);
+  let s = newGame(grid, deployment, corruption);
   const frames: Frame[] = [
     {
       state: s,
       mid: s,
       optionCount: 0,
       attackAvailable: false,
-      problems:
-        checksum(s) === replay.initialChecksum
-          ? []
-          : ["the starting position does not match the recording"],
+      problems: [
+        ...deploymentProblems(deployment, grid, teams).map((p) => `illegal deployment: ${p}`),
+        ...(checksum(s) === replay.initialChecksum ? [] : ["the starting position does not match the recording"]),
+      ],
     },
   ];
 
@@ -149,8 +175,7 @@ export type StepReport = {
 
 const FACING_WORD = { N: "north", E: "east", S: "south", W: "west" } as const;
 
-export const square = (size: number, row: number, col: number) =>
-  "abcdefghijklmnop"[col] + String(size - row);
+export const square = squareName;
 
 export const pieceLabel = (p: Piece) => `${MACHINE_BY_ID[p.machineId].name} (P${p.owner})`;
 
@@ -234,13 +259,29 @@ export function describeStep(replay: Replay, frames: Frame[], index: number): St
 
   if (index === 0) {
     const first = frames[0].state.turn;
+    const [k1, k2] = [setKey(replay.setup.teams[1]), setKey(replay.setup.teams[2])];
+    // Which sides placed their own machines, rather than taking the default rule —
+    // which may not even be legal on a board with a chasm in its back rows.
+    let usual: Deployment[] = [];
+    try {
+      usual = defaultDeployment(replay.setup.teams, frames[0].state.grid);
+    } catch {
+      // Then every legal deployment on this board was chosen.
+    }
+    const where = (d: Deployment) => `${d.owner}${d.machineId}${squareName(size, d.row, d.col)}${d.facing}`;
+    const own = ([1, 2] as Owner[]).filter((o) => {
+      const mine = (ds: Deployment[]) => ds.filter((d) => d.owner === o).map(where).sort().join();
+      return mine(replay.setup.deployment) !== mine(usual);
+    });
     return {
       headline: "Starting position",
       activation: { effects: [], log: [] },
       turnChange: null,
       note:
         `${replay.agents[1]} plays Player 1, ${replay.agents[2]} plays Player 2. ` +
-        `Both field the same set; Player ${first} moves first.`,
+        (k1 === k2 ? "Both field the same set" : `Player 1 fields ${k1}; Player 2 fields ${k2}`) +
+        `; Player ${first} moves first.` +
+        (own.length ? ` ${own.map((o) => `Player ${o}`).join(" and ")} chose ${own.length > 1 ? "their" : "its"} own starting positions.` : ""),
     };
   }
 

@@ -34,9 +34,11 @@ See **[plan.md](plan.md)** for the full two-stage plan.
 | Six boards, a map editor, undo, and save/load | Search and learned agents (Stage 2 rungs 2-4) |
 | **Headless arena** with five baseline agents and Elo ratings | |
 | **Replay viewer** — step through any AI game move by move, with a battle report | |
+| **Results store** — every arena game in one SQLite file; **set sweeps** measure sets against the field | |
 
-**Testing:** 123 golden assertions, 11 frozen perft counts, and 400 seeded fuzz games per run — all under
-`npm test`. What each suite checks is tracked in [docs/testing.md](docs/testing.md).
+**Testing:** a type check, 133 golden assertions, 11 frozen perft counts, 400 seeded fuzz games, and the
+arena's replay, set, store and deployment suites — all under `npm test`. What each one checks is tracked in
+[docs/testing.md](docs/testing.md).
 
 ## Running it
 
@@ -65,11 +67,16 @@ npm run deploy
 npm run arena -- tournament --pairs 50
 ```
 
+```bash
+npm run arena -- sweep --agent greedy --sets sample:100 --opponents 5
+```
+
 `dev` serves on :5173, `test` typechecks and then runs the engine and arena suites, `typecheck` runs just the
 type check, `test:fuzz:deep` runs 5000 random games instead of 400, `deploy` typechecks, builds and ships to
-Firebase Hosting, and `arena` runs headless agent matches. `tsx` runs TypeScript without checking its types, so
+Firebase Hosting, and `arena` runs headless matches. `tsx` runs TypeScript without checking its types, so
 `typecheck` is the only thing that catches a type error in the engine and arena tests, the arena CLI or the
-experiments.
+experiments. Arena results are kept in `results/arena.sqlite` (git-ignored), and `arena sweep` measures sets
+rather than agents — see [docs/results.md](docs/results.md).
 
 ## How to play
 
@@ -118,7 +125,8 @@ packages/engine   pure rules — no UI, no dependencies. The foundation.
 packages/data     machine roster, board files
 packages/web      Vite + React app
 packages/ai       agents and the evaluation function
-packages/arena    headless match runner, Elo, tournaments
+packages/arena    headless match runner, Elo, tournaments, set sweeps, the results store
+results/          arena.sqlite — every game the arena has played (git-ignored)
 assets/           32×32 terrain tiles, and the piece reference sheet
 tools/            regenerators for the boards, the stat table and the sprites
 docs/             rules spec, piece stats
@@ -135,6 +143,8 @@ docs/             rules spec, piece stats
   known gaps. Add a line here when you add a rule.
 - **[docs/arena.md](docs/arena.md)** — how agents are measured, the current Elo ladder, and what the arena has
   surfaced about the game.
+- **[docs/results.md](docs/results.md)** — the results store: why SQLite, what is kept, and how to find the
+  strongest of the 147,106 legal sets without playing 10.8 billion pairings.
 - **[docs/heuristics.md](docs/heuristics.md)** — the AI experiments, each with its own metrics. The first is the
   replay viewer and game-health check: **Watch an AI game** on the landing page.
 - **[plan.md](plan.md)** — architecture and the road to the AI stage.

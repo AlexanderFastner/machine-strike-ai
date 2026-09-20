@@ -13,6 +13,7 @@ __pycache__/
 venv/
 
 # training + experiment outputs
+results/
 training/data/
 training/checkpoints/
 experiments/**/results/

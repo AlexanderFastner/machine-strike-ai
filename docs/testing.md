@@ -16,12 +16,12 @@ npm test
 npm run test:fuzz:deep
 ```
 
-`npm test` runs the three engine suites plus the arena's replay tests (a few seconds). `test:fuzz:deep` runs
-5000 games instead of 400.
+`npm test` typechecks first (§5), then runs the three engine suites and the arena's replay, set, store and
+deployment tests — under twenty seconds in all. `test:fuzz:deep` runs 5000 games instead of 400.
 
 ---
 
-## The three suites, and why there are three
+## The suites, and why there are several
 
 They fail in different ways on purpose. Each catches a class of bug the others structurally cannot.
 
@@ -31,6 +31,9 @@ They fail in different ways on purpose. Each catches a class of bug the others s
 | **Perft** | `test/perft.ts` | Any change to the *shape* of the legal action space, whether or not it was intended | Whether the resulting states are sane |
 | **Fuzz** | `test/fuzz.ts` | States that are each individually legal but collectively impossible, across thousands of random games | Whether the rules match the real game |
 | **Replay** | `packages/arena/test/replay.ts` | Recorded games failing to re-execute exactly, and the replay checks failing to notice when they don't | Anything the recorded games happen not to exercise |
+| **Sets** | `packages/arena/test/sets.ts` | A set missing from the enumeration, or any legal set deploying illegally on any board | Whether the deployment rule is a *good* one |
+| **Store** | `packages/arena/test/store.ts` | A stored result answering for a game it isn't, or a sweep replaying what it already has | Games the store has never been asked about |
+| **Deploy** | `packages/arena/test/deploy.ts` | An agent's choice of starting squares being accepted when illegal, changing a game it shouldn't, or getting lost on the way to a replay or the store | Whether a deployment is any *good* |
 
 The division earns its keep. The Dash landing bug in §4 was invisible to golden tests (nobody thought to write
 that case) and invisible to perft (the action counts were correct — it was the *resolution* that was wrong).
@@ -38,7 +41,7 @@ Only fuzz found it, and only because it checked an invariant rather than an expe
 
 ---
 
-## 1. Golden tests — 127 assertions
+## 1. Golden tests — 133 assertions
 
 Specific positions with hand-computed expected results, taken from [docs/rules.md](rules.md).
 
@@ -237,6 +240,67 @@ recordings re-execute cleanly, and that the checks actually fire when something 
 - [x] A changed starting position is reported
 - [x] Passing while legal moves exist is flagged
 - [x] Game metrics agree with the recorded result: rounds, a winner explained, a first attack recorded
+
+## Set tests — `packages/arena/test/sets.ts`
+
+The sweeps measure sets, so the space of sets and where each one stands need their own evidence.
+
+- [x] **147,106 legal sets** — a frozen count, like perft's, and equal to an independent count by dynamic
+      programming over point totals
+- [x] Every set appears once, under its canonical key, and passes the legality check; the count by size is
+      frozen too, from one machine to ten
+- [x] **Every legal set deploys legally on every board** — 882,636 deployments, each on the board, one machine
+      per square, no chasm for a machine that can't fly, within the back two rows, and Player 2 exactly Player 1
+      turned 180°. Under the old rule 23% of sets failed this
+- [x] Centring, for one, five and ten machines; the order a set is listed in makes no difference
+- [x] A deployment onto a chasm is refused; so are an 11-point set, five copies and an unknown machine
+- [x] Ten machines against one re-execute cleanly on two boards, from either side
+- [x] Sampling is reproducible and without repeats, and a set's j-th opponent never depends on how many
+      opponents were asked for — what lets a sweep be extended without replaying
+
+## Store tests — `packages/arena/test/store.ts`
+
+- [x] A game is played once: asking again answers from the store — before it is flushed and after — with
+      exactly what playing it gives
+- [x] Seed, board, blight, sides and sets each make a different game; a renamed board and a reordered set do
+      not; an edited board is a different board
+- [x] A second connection sees stored games; a different code version does not
+- [x] A stored game regenerates exactly, ending on its stored checksum
+- [x] A sweep plays 2 × 2 × 2 games; running it again plays none; extending it plays only the new opponents;
+      two shards split it; a stop request is honoured
+- [x] Every sweep game's subject side holds a candidate, and each candidate is measured from both sides
+- [x] The set leaderboard's scores match a hand count from the raw rows, and exclude other agents and sweeps;
+      the machine table agrees with it
+- [x] A tournament through the store gives the same result as one played directly, and refitting it from the
+      store agrees
+- [x] The code version changes when a rule changes, and not when the CLI changes or Finder leaves a `.DS_Store`
+
+## Deployment tests — `packages/arena/test/deploy.ts`
+
+Agents may choose where their machines start. Each claim below was also checked by breaking the code on
+purpose — skipping the canonical ordering, sharing the board between views, letting deployment draw on the
+game's dice — and seeing the suite fail.
+
+- [x] **Not choosing changes nothing**: naming the default arrangement explicitly — listed backwards, or handed
+      over scrambled by an agent — plays the same game, on three boards and three seeds; `deploy=centred` is the
+      plain agent. Separately, 40 varied games were checked bit for bit before and after the change
+- [x] An agent sees its side, both sets, the board and the blight setting; one side scribbling on its view
+      reaches neither the other side nor the game
+- [x] Every illegal choice fails loudly and names the agent: outside its back two rows, in the enemy's rows, off
+      the board, two on one square, a bad facing, a machine not in its set, one left behind, an arrangement for
+      another set, a non-flyer on a chasm. A flyer may start on a chasm; the default rule fails loudly where it
+      can't deploy
+- [x] Random deployment is legal for 250 sets across every board, uses every facing and both back rows, never
+      strands a non-flyer on a board with chasms in its back rows, and is reproducible from the seed
+- [x] Choosing draws on dice of its own: a random deployment and the same arrangement replayed without dice play
+      the same game
+- [x] An arrangement reads the same from either side; Player 2's copy is the 180° turn; keys round-trip and
+      canonicalise; malformed keys and unknown options or agents are refused
+- [x] Replays carry the deployment and re-execute from it; the opening says who chose; a doctored deployment is
+      caught, and an illegal one is called illegal
+- [x] The store keys games on arrangements: two arrangements are two games, one arrangement listed another way
+      is one, and an arrangement is stored once whichever side played it. A stored game gives back its
+      deployment and replays to its stored final position, even for a deployer no registry knows
 
 ## 5. Known gaps
 

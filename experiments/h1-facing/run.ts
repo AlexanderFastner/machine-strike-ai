@@ -12,7 +12,8 @@ import { execSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { agentByName, type Agent } from "@ms/ai";
-import { BOARDS, TEAMS, gameMetrics, rebuild, recordGame, type MatchSetup } from "@ms/arena";
+import { TEAMS, gameMetrics, mirror, rebuild, recordGame, type MatchSetup } from "@ms/arena";
+import { BOARDS } from "@ms/arena/node";
 import type { Owner } from "@ms/engine";
 
 const scale = Number(process.env.PAIRS_SCALE ?? 1);
@@ -62,7 +63,7 @@ const blank = (): SideStats => ({
 });
 
 function matchup(label: string, a: string, b: string, board: string, pairs: number): Outcome {
-  const setup: MatchSetup = { board: BOARDS[board], team: TEAMS.standard, corruption: true };
+  const setup: MatchSetup = { board: BOARDS[board], teams: mirror(TEAMS.standard), corruption: true };
   const sides: Record<string, SideStats> = { [a]: blank(), [b]: blank() };
   const A = timed(agentByName(a), sides[a]);
   const B = timed(agentByName(b), sides[b]);

@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AGENTS, agentByName } from "@ms/ai";
 import {
-  BOARDS, TEAMS, describeStep, gameMetrics, rebuild, recordGame, square,
+  REPLAY_VERSION, TEAMS, describeStep, gameMetrics, mirror, rebuild, recordGame, setKey, square,
   type Effect, type Replay,
 } from "@ms/arena";
 import { MACHINE_BY_ID, corruptedTiles, type GameState } from "@ms/engine";
 import { Board, type PlacedPiece } from "../board/Board";
+import { BUILT_IN_BOARDS } from "../data/boards";
+
+const BOARDS = Object.fromEntries(BUILT_IN_BOARDS.map((b) => [b.id, b]));
 
 type Props = { onQuit: () => void };
 
@@ -36,7 +39,7 @@ export function ReplayViewer({ onQuit }: Props) {
     setTimeout(() => {
       const s = seed ?? 1 + Math.floor(Math.random() * 50);
       const aFirst = Math.random() < 0.5;
-      const setup = { board: BOARDS[opts.board], team: TEAMS[opts.team], corruption: opts.corruption };
+      const setup = { board: BOARDS[opts.board], teams: mirror(TEAMS[opts.team]), corruption: opts.corruption };
       const A = agentByName(opts.a);
       const B = agentByName(opts.b);
       setReplay(aFirst ? recordGame(A, B, setup, s) : recordGame(B, A, setup, s));
@@ -48,7 +51,12 @@ export function ReplayViewer({ onQuit }: Props) {
   async function load(file: File) {
     try {
       const parsed = JSON.parse(await file.text()) as Replay;
-      if (parsed.version !== 1 || !Array.isArray(parsed.steps)) throw new Error("not a replay file");
+      if (!Array.isArray(parsed.steps)) throw new Error("not a replay file");
+      if (parsed.version !== REPLAY_VERSION)
+        throw new Error(
+          `it is a version ${parsed.version} replay, from an older arena that deployed machines differently. ` +
+            `Record it again from its seed.`,
+        );
       setReplay(parsed);
       setFrame(0);
       setError(null);
@@ -163,7 +171,11 @@ export function ReplayViewer({ onQuit }: Props) {
             <span className="who p2">{replay.agents[2]}</span>
           </h2>
           <p className="sub">
-            Seed {replay.seed} · {replay.setup.board.name} · {replay.setup.team.length} machines each ·
+            Seed {replay.seed} · {replay.setup.board.name} ·{" "}
+            {setKey(replay.setup.teams[1]) === setKey(replay.setup.teams[2])
+              ? `${replay.setup.teams[1].length} machines each`
+              : `${replay.setup.teams[1].length} machines against ${replay.setup.teams[2].length}`}{" "}
+            ·
             blight {replay.setup.corruption ? "on" : "off"} · {metrics.endedBy} in {metrics.rounds}{" "}
             rounds
           </p>

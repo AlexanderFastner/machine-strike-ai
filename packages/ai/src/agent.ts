@@ -1,4 +1,4 @@
-import type { Activation, GameState } from "@ms/engine";
+import type { Activation, Facing, GameState, Owner, TerrainId } from "@ms/engine";
 
 /**
  * Every agent is a pure function of (state, randomness). Randomness is injected
@@ -9,6 +9,30 @@ export type Agent = {
   name: string;
   /** null means "no legal activation" — the caller ends the turn. */
   choose(state: GameState, rng: Rng): Activation | null;
+  /**
+   * Where this side's machines start: one placement per machine, anywhere in
+   * its own back two rows, facing any way (rules §8.2). Optional — an agent
+   * without it starts where the arena's default rule puts it, so every agent
+   * written before deployment was a choice plays exactly the games it did.
+   */
+  deploy?(view: DeployView, rng: Rng): Placement[];
+};
+
+/** Where one machine starts: a square, in the board's own coordinates, and a facing. */
+export type Placement = { machineId: string; row: number; col: number; facing: Facing };
+
+/**
+ * What a player knows when it deploys: the board, its side, the blight setting,
+ * and both sets — the draft is hidden only until deployment (rules §8.1). Not
+ * where the opponent is putting its machines: both sides deploy at once.
+ */
+export type DeployView = {
+  owner: Owner;
+  grid: TerrainId[][];
+  corruption: boolean;
+  /** This side's machines, one entry per machine. */
+  mine: string[];
+  theirs: string[];
 };
 
 export type Rng = () => number;

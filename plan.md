@@ -498,7 +498,8 @@ deterministic, tactical game — that's a real finding worth writing up.
 generation**, not gradients — which is why engine speed is priority #1.
 
 **Reproducibility:** every run is a checked-in config (`experiments/<name>/config.yaml`) plus results with seed,
-git SHA, agent versions, and full Elo output.
+git SHA, agent versions, and full Elo output. Arena games are stored that way already, in one SQLite file keyed
+by what decides each game — see [docs/results.md](docs/results.md).
 
 ---
 

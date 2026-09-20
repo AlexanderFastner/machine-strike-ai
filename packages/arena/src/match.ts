@@ -1,9 +1,9 @@
 import {
-  applyActivation, endTurn, legalActivations,
-  type Activation, type GameState, type Owner,
+  applyActivation, checksum, endTurn, legalActivations,
+  type Activation, type Deployment, type GameState, type Owner,
 } from "@ms/engine";
 import { makeRng, type Agent } from "@ms/ai";
-import { startPosition, type MatchSetup } from "./setup";
+import { chooseDeployment, startPosition, type MatchSetup } from "./setup";
 
 export type GameResult = {
   winner: Owner | "draw";
@@ -13,6 +13,11 @@ export type GameResult = {
   /** Average legal activations per decision — the game's real branching factor. */
   branching: number;
   hitCap: boolean;
+  /**
+   * Fingerprint of the final position. Replaying the same game must land on it
+   * again, which is how a stored result is later proven to still reproduce.
+   */
+  checksum: string;
 };
 
 export const ACTIVATION_CAP = 600;
@@ -28,6 +33,10 @@ export type GameHooks = {
  * The one game loop. Tournaments, benches and replays all run through it, so a
  * recorded game is the same code path as every game the arena counts — not a
  * parallel reimplementation that could quietly disagree.
+ *
+ * The game starts where the agents deploy (setup.ts, chooseDeployment). A
+ * caller that already knows the deployment — the results store, which needs it
+ * to recognise a game before playing it — passes it in rather than asking twice.
  */
 export function runGame(
   p1: Agent,
@@ -35,8 +44,9 @@ export function runGame(
   setup: MatchSetup,
   seed: number,
   hooks: GameHooks = {},
+  deployment: Deployment[] = chooseDeployment(p1, p2, setup, seed),
 ): GameResult {
-  let s = startPosition(setup);
+  let s = startPosition(setup, deployment);
   hooks.start?.(s);
   const rng = makeRng(seed);
   let activations = 0;
@@ -72,11 +82,13 @@ export function runGame(
     activations,
     branching: decisions ? branchingTotal / decisions : 0,
     hitCap: !s.winner,
+    checksum: checksum(s),
   };
 }
 
-export const playGame = (p1: Agent, p2: Agent, setup: MatchSetup, seed: number) =>
-  runGame(p1, p2, setup, seed);
+export type PlayFn = (p1: Agent, p2: Agent, setup: MatchSetup, seed: number) => GameResult;
+
+export const playGame: PlayFn = (p1, p2, setup, seed) => runGame(p1, p2, setup, seed);
 
 export type MatchResult = {
   a: string;
@@ -96,6 +108,9 @@ export type MatchResult = {
  * agent moving first. First-player advantage then cancels out instead of
  * showing up as strength, and variance drops sharply for the same number of
  * games (plan.md, Stage 2 arena).
+ *
+ * `play` is how a single game gets its result — played here by default, or
+ * looked up in the results store when that game has been played before.
  */
 export function playMatch(
   a: Agent,
@@ -103,13 +118,14 @@ export function playMatch(
   setup: MatchSetup,
   pairs: number,
   seed0 = 1,
+  play: PlayFn = playGame,
 ): MatchResult {
   let wins = 0, losses = 0, draws = 0, rounds = 0, branching = 0, capped = 0;
 
   for (let i = 0; i < pairs; i++) {
     const seed = seed0 + i;
     for (const aIsFirst of [true, false]) {
-      const r = aIsFirst ? playGame(a, b, setup, seed) : playGame(b, a, setup, seed);
+      const r = aIsFirst ? play(a, b, setup, seed) : play(b, a, setup, seed);
       const aWon = aIsFirst ? r.winner === 1 : r.winner === 2;
       const bWon = aIsFirst ? r.winner === 2 : r.winner === 1;
       if (r.winner === "draw") draws++;

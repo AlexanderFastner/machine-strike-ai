@@ -10,3 +10,4 @@ export * from "./threats";
 export * from "./game";
 export * from "./actions";
 export * from "./checksum";
+export * from "./deployment";

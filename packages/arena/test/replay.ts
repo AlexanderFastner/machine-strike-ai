@@ -4,7 +4,8 @@
  * a divergence detector that has never been seen to trip proves nothing.
  */
 import { agentByName } from "@ms/ai";
-import { BOARDS, TEAMS, gameMetrics, rebuild, recordGame, describeStep, type Replay } from "../src/index.ts";
+import { TEAMS, gameMetrics, mirror, rebuild, recordGame, describeStep, type Replay } from "../src/index.ts";
+import { BOARDS } from "../src/boards.ts";
 
 let pass = 0, fail = 0;
 const eq = (label: string, got: unknown, want: unknown) => {
@@ -14,7 +15,7 @@ const eq = (label: string, got: unknown, want: unknown) => {
 };
 
 const setupFor = (board: string, corruption: boolean) =>
-  ({ board: BOARDS[board], team: TEAMS.standard, corruption });
+  ({ board: BOARDS[board], teams: mirror(TEAMS.standard), corruption });
 
 // --- honest recordings re-execute cleanly ---------------------------------
 const matchups = [["heuristic", "greedy"], ["greedy", "random"], ["random", "random"], ["aggressive", "heuristic"]];

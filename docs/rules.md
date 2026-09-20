@@ -596,6 +596,13 @@ What sits behind the machine decides the outcome:
 - **[?]** Starting **facing** — chosen freely, or fixed toward the opponent?
 - **[H]** Players alternate placing one piece at a time, each choosing facing freely.
 
+> **Where this lives.** The legality rule — own back two rows, terrain the machine can enter, one machine per
+> square, exactly its own set — is `deploymentProblems` in the engine (`deployment.ts`). Neither caller plays
+> the **[H]** rule exactly: the hot-seat UI alternates placements but deploys every machine facing forward, and
+> the arena lets agents choose facing freely but has both sides place at once, blind to each other. The two
+> zones never overlap, so blind placement is the **[H]** rule played without reacting to the opponent
+> ([arena.md](arena.md#choosing-where-to-start)).
+
 > Note the interaction with corruption: the back two rows are **where each player's blight front begins**
 > (§2.5). Deployment territory is the first thing to be consumed, so pieces cannot simply camp at home.
 

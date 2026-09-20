@@ -4,9 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node.ts"
+  },
   "scripts": {
-    "arena": "tsx src/cli.ts",
-    "test": "tsx test/replay.ts"
+    "arena": "node --import tsx src/cli.ts",
+    "test": "tsx test/replay.ts && tsx test/sets.ts && tsx test/store.ts && tsx test/deploy.ts"
   },
   "dependencies": {
     "@ms/engine": "*",
