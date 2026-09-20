@@ -310,7 +310,11 @@ Honest list of what these tests do **not** cover.
 - [ ] **The UI has its own action path.** `applyActivation` is what perft and fuzz exercise; the web app drives
       `movePiece` / `attackWith` / `endActivation` itself. They agree today, but nothing enforces that. **The
       next refactor should make the UI go through `applyActivation`**, so the tests protect what players
-      actually run.
+      actually run. This gap has now cost one real bug, found in play rather than by a test: the screen let a
+      machine move and then let another be selected, which abandoned the activation's bookkeeping but kept its
+      move — **three machines on two activations**. The engine cannot do that, because `applyActivation`
+      resolves and ends in one step. The screen now refuses to switch machines mid-activation, but the class of
+      bug stays open until the path is shared.
 - [ ] **The roster is an unverified wiki transcription.** Four entries have been checked and two were wrong. No
       test can catch a wrong stat — only the in-game piece cards can. This is the largest correctness risk in
       the project.

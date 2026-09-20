@@ -58,6 +58,16 @@ export function Game({ board, corruption, deployments, initialState, ai, onQuit 
    */
   const [history, setHistory] = useState<GameState[]>([]);
   const [toast, setToast] = useState<string | null>(null);
+  /**
+   * The position this activation began from. While the live state differs from
+   * it, the selected machine has already *done* something — moved, turned,
+   * overcharged — and that is an activation in progress, whether or not it has
+   * been ended yet. Without this, selecting another machine abandoned the
+   * bookkeeping but kept the move, and a turn could spend three machines on two
+   * activations. The engine's own path cannot do that: applyActivation resolves
+   * and ends in one step.
+   */
+  const [activationStart, setActivationStart] = useState<GameState | null>(null);
 
   const setState = (next: GameState) => {
     setHistory((h) => [...h.slice(-49), state]);
@@ -107,9 +117,12 @@ export function Game({ board, corruption, deployments, initialState, ai, onQuit 
   }, [ai, aiToMove, state]);
 
   function save() {
-    const ok = saveGame(board, corruption, state);
-    setToast(ok ? "Game saved" : "Could not save — storage unavailable");
-    setTimeout(() => setToast(null), 2200);
+    notify(saveGame(board, corruption, state) ? "Game saved" : "Could not save — storage unavailable");
+  }
+
+  function notify(message: string) {
+    setToast(message);
+    setTimeout(() => setToast(null), 2600);
   }
   const [selectedUid, setSelectedUid] = useState<number | null>(null);
   const [hasMoved, setHasMoved] = useState(false);
@@ -119,6 +132,9 @@ export function Game({ board, corruption, deployments, initialState, ai, onQuit 
   const [sprinted, setSprinted] = useState(false);
   /** Overcharge spent this activation: 2 health, paid after the action. */
   const [overcharged, setOvercharged] = useState(false);
+
+  /** This machine has already done something this activation, so it owes the turn an ending. */
+  const underway = activationStart !== null && state !== activationStart;
 
   const canAct = activatablePieces(state, state.turn);
   const blight = corrupted(state);
@@ -196,6 +212,7 @@ export function Game({ board, corruption, deployments, initialState, ai, onQuit 
 
   function selectPiece(uid: number) {
     if (!selectable.has(uid)) return;
+    setActivationStart(state);
     setSelectedUid(uid);
     setHasMoved(false);
     setPending(null);
@@ -204,6 +221,7 @@ export function Game({ board, corruption, deployments, initialState, ai, onQuit 
   }
 
   const clearActivation = () => {
+    setActivationStart(null);
     setSelectedUid(null);
     setHasMoved(false);
     setPending(null);
@@ -215,6 +233,13 @@ export function Game({ board, corruption, deployments, initialState, ai, onQuit 
     if (aiToMove) return;
     const occupant = state.pieces.find((p) => p.row === row && p.col === col);
     if (occupant && occupant.owner === state.turn && occupant.uid !== selectedUid) {
+      // A machine that has already moved or turned is mid-activation: it has to
+      // finish before another one starts, or the turn would spend more machines
+      // than it has activations (rules 5.3).
+      if (underway) {
+        notify("Finish this machine first — Enter ends its activation, or Undo takes the move back.");
+        return;
+      }
       selectPiece(occupant.uid);
       return;
     }
