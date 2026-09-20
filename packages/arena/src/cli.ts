@@ -19,7 +19,7 @@
  * and keeps nothing.
  */
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { relative, resolve } from "node:path";
 import { AGENTS, agentByName } from "@ms/ai";
@@ -77,6 +77,15 @@ const shownDb = relative(process.cwd(), dbPath).startsWith("..") ? dbPath : rela
 let opened: ResultStore | null = null;
 const store = () => (opened ??= new ResultStore(dbPath));
 const closeStore = () => opened?.close();
+
+/** For reading: opening a store creates one, and a report should never leave a file behind. */
+function readStore(): ResultStore {
+  if (dbPath !== ":memory:" && !existsSync(dbPath)) {
+    console.log(`No results store at ${shownDb} yet. Play some games first — a match, a tournament or a sweep.`);
+    process.exit(0);
+  }
+  return store();
+}
 
 /** A store with a run started for this command, or null under --no-store. */
 function storeRun(): ResultStore | null {
@@ -389,7 +398,7 @@ function scopeFor(agent: string, boards: string[]): Scope {
 }
 
 function report(what: string) {
-  const s = store();
+  const s = readStore();
   const agent = flag("agent", "greedy")!;
   const boards = resolveBoards(boardName);
   const scope = scopeFor(agent, boards);
@@ -483,7 +492,7 @@ function saveReplay(replay: object, name: string) {
  * final checksum — proof the result still reproduces, not just a lookalike.
  */
 function recordStoredGame(id: number) {
-  const s = store();
+  const s = readStore();
   const g = s.game(id);
   if (!g) throw new Error(`No game ${id} in ${shownDb}.`);
   if (g.code !== s.code)
