@@ -47,15 +47,31 @@ function sideToward(defender: Piece, attacker: Piece): "F" | "B" | "L" | "R" {
  *                 mostly isn't there.
  * Nothing else in the evaluation differs between them.
  */
+/**
+ * The weights, in the groups a term is scored by. A scale on a group multiplies
+ * its weights and leaves their ratios alone, so a term can be switched off or
+ * amplified without touching the rest of the evaluation (H2, H3).
+ */
+export const TERMS = {
+  vp: ["victoryPoint"],
+  health: ["health"],
+  terrain: ["terrain"],
+  threat: ["threatened", "threatening"],
+  facing: ["weakSideExposed", "armourPresented"],
+  blight: ["inBlight"],
+  advance: ["advance"],
+} as const satisfies Record<string, readonly (keyof typeof WEIGHTS)[]>;
+
+export type Term = keyof typeof TERMS;
+
 export type EvalOptions = {
   facing: "current" | "next-turn" | "next-turn-own";
   /**
-   * Multiplier on both facing weights, their 2:1 ratio untouched (H2). The
-   * weights were set for a term that fired once a game; the next-turn term
-   * fires on every machine every turn. 1 leaves WEIGHTS as they stand; 0
-   * removes facing scoring altogether.
+   * Multipliers per term, each defaulting to 1 — and 1 multiplies exactly, so
+   * an evaluation that asks for no scale is the evaluation as written. 0 removes
+   * a term; 2 doubles it. H2 priced `facing` this way and H3 priced them all.
    */
-  facingScale?: number;
+  scale?: Partial<Record<Term, number>>;
 };
 
 export function evaluate(
@@ -68,9 +84,10 @@ export function evaluate(
   if (s.winner === "draw") return 0;
 
   const them = other(me);
-  const facingScale = opts.facingScale ?? 1;
+  const k = (t: Term) => opts.scale?.[t] ?? 1;
+  const facingScale = k("facing");
   const blight = corruptedTiles(s.grid.length, s.corruption);
-  let score = (s.vp[me] - s.vp[them]) * WEIGHTS.victoryPoint;
+  let score = (s.vp[me] - s.vp[them]) * WEIGHTS.victoryPoint * k("vp");
 
   // Precompute reach once per piece: it is the expensive part of this function.
   const reach = new Map<number, { tiles: Set<string>; threats: Set<string> }>();
@@ -82,12 +99,12 @@ export function evaluate(
     const m = MACHINE_BY_ID[p.machineId];
 
     // Health, weighted by how much the machine is worth losing.
-    score += sign * p.hp * WEIGHTS.health * (value(p) / m.health);
+    score += sign * p.hp * WEIGHTS.health * k("health") * (value(p) / m.health);
 
     // Terrain is the defender's whole Combat Power, so height is worth real points.
     const onBlight = blight.has(`${p.row},${p.col}`);
-    score += sign * (onBlight ? -2 : TERRAIN_MOD[s.grid[p.row][p.col]]) * WEIGHTS.terrain;
-    if (onBlight) score += sign * WEIGHTS.inBlight;
+    score += sign * (onBlight ? -2 : TERRAIN_MOD[s.grid[p.row][p.col]]) * WEIGHTS.terrain * k("terrain");
+    if (onBlight) score += sign * WEIGHTS.inBlight * k("blight");
 
     // Engagement: without this, agents that cannot see a capture just shuffle.
     const enemies = s.pieces.filter((q) => q.owner !== p.owner);
@@ -95,7 +112,7 @@ export function evaluate(
       const nearest = Math.min(
         ...enemies.map((q) => Math.abs(q.row - p.row) + Math.abs(q.col - p.col)),
       );
-      score += sign * -nearest * WEIGHTS.advance;
+      score += sign * -nearest * WEIGHTS.advance * k("advance");
     }
   }
 
@@ -107,7 +124,7 @@ export function evaluate(
       if (!env.tiles.has(`${victim.row},${victim.col}`)) continue;
 
       const iAmAttacking = attacker.owner === me;
-      score += iAmAttacking ? WEIGHTS.threatening : WEIGHTS.threatened;
+      score += (iAmAttacking ? WEIGHTS.threatening : WEIGHTS.threatened) * k("threat");
       if (opts.facing !== "current") continue;
 
       const vm = MACHINE_BY_ID[victim.machineId];

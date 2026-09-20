@@ -4,7 +4,7 @@ import {
 } from "@ms/engine";
 import { argmaxRandom, pick, type Agent } from "./agent";
 import { RandomDeployer, fixedDeployer, withDeployer } from "./deploy";
-import { evaluate, type EvalOptions } from "./evaluate";
+import { TERMS, evaluate, type EvalOptions, type Term } from "./evaluate";
 
 /** The floor. Anything that cannot beat this is broken, not merely weak. */
 export const RandomAgent: Agent = {
@@ -132,8 +132,11 @@ export const AGENTS: Record<string, Agent> = {
  *
  *  - `deploy` takes `random`, an arrangement key (deploy.ts), or `centred` — the
  *    arena's default rule, which is simply the plain agent.
- *  - `w` scales the facing weights on an agent that scores with the evaluation
- *    (H2). `w=1` is the plain agent, so it keeps its name and its results.
+ *  - a term name — `vp`, `health`, `terrain`, `threat`, `facing`, `blight`,
+ *    `advance` — scales that term's weights on an agent that scores with the
+ *    evaluation: `heuristic:terrain=0`, `heuristic:threat=2` (H3). `w` is the
+ *    alias for `facing` that H2 used. A scale of 1 is the plain agent, so it
+ *    keeps its name and its results.
  */
 export const agentByName = (spec: string): Agent => {
   const [name, ...options] = spec.split(":");
@@ -141,17 +144,21 @@ export const agentByName = (spec: string): Agent => {
   if (!agent) throw new Error(`Unknown agent "${name}". Known: ${Object.keys(AGENTS).join(", ")}`);
   for (const option of options) {
     const [key, value] = [option.slice(0, option.indexOf("=")), option.slice(option.indexOf("=") + 1)];
-    if (!option.includes("=") || !value || (key !== "deploy" && key !== "w"))
+    const term = key === "w" ? "facing" : (key as Term);
+    const scales = key === "deploy" ? null : TERMS[term];
+    if (!option.includes("=") || !value || (key !== "deploy" && !scales))
       throw new Error(
-        `Unknown option "${option}" in "${spec}". Known: deploy=centred|random|<arrangement>, w=<number>.`,
+        `Unknown option "${option}" in "${spec}". Known: deploy=centred|random|<arrangement>, ` +
+          `and a scale on any term: ${Object.keys(TERMS).join(", ")} (w is the alias for facing).`,
       );
-    if (key === "w") {
+    if (scales) {
       const scale = Number(value);
       const scoring = (agent as ScoringAgent).scoring;
       if (!scoring) throw new Error(`"${name}" does not score with the evaluation, so it has no weights to scale.`);
-      if (!Number.isFinite(scale) || scale < 0) throw new Error(`"w=${value}" is not a scale: it must be a number, 0 or more.`);
+      if (!Number.isFinite(scale) || scale < 0) throw new Error(`"${option}" is not a scale: it must be a number, 0 or more.`);
       if (scale !== 1) {
-        const scaled = scoringAgent(`${agent.name}:w=${value}`, { ...scoring.opts, facingScale: scale }, scoring.sign);
+        const opts = { ...scoring.opts, scale: { ...scoring.opts.scale, [term]: scale } };
+        const scaled = scoringAgent(`${agent.name}:${key}=${value}`, opts, scoring.sign);
         agent = agent.deploy ? { ...scaled, deploy: agent.deploy } : scaled;
       }
     } else if (value === "centred") agent = AGENTS[name];

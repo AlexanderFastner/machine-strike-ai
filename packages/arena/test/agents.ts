@@ -61,11 +61,27 @@ const game = (a: string, b: string, seed: number) =>
     ["heuristic:w=2:deploy=random", true, "heuristic:deploy=random:w=2", true]);
 }
 
+// --- a scale on every term (H3) ------------------------------------------------------
+{
+  const terms = ["vp", "health", "terrain", "threat", "facing", "blight", "advance"];
+  eq("every term takes a scale", terms.map((t) => agentByName(`heuristic:${t}=0`).name),
+    terms.map((t) => `heuristic:${t}=0`));
+  eq("a scale of 1 is the plain agent, whichever term", terms.map((t) => agentByName(`heuristic:${t}=1`).name),
+    terms.map(() => "heuristic"));
+  for (const seed of [4, 12])
+    eq(`w= is the alias for facing= (seed ${seed})`, game("heuristic:w=0", "greedy", seed), game("heuristic:facing=0", "greedy", seed));
+  eq("turning off the win condition changes games",
+    [4, 12].every((seed) => game("heuristic:vp=0", "greedy", seed) !== game("heuristic", "greedy", seed)), true);
+  eq("scales stack rather than replace each other",
+    (agentByName("heuristic:vp=0:health=2") as ScoringAgent).scoring.opts.scale, { vp: 0, health: 2 });
+}
+
 // --- nonsense is refused ------------------------------------------------------------
 throws("a scale that is not a number", () => agentByName("heuristic:w=x"), "is not a scale");
 throws("a negative scale", () => agentByName("heuristic:w=-1"), "is not a scale");
 throws("a scale on an agent that doesn't score", () => agentByName("greedy:w=2"), "does not score with the evaluation");
 throws("an option nobody knows", () => agentByName("heuristic:z=1"), 'Unknown option "z=1"');
+throws("a term nobody knows", () => agentByName("heuristic:tempo=0"), 'Unknown option "tempo=0"');
 throws("an option with no value", () => agentByName("heuristic:w"), 'Unknown option "w"');
 throws("an agent nobody knows", () => agentByName("nobody"), 'Unknown agent "nobody"');
 
