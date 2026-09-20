@@ -4,7 +4,7 @@ import {
 } from "@ms/engine";
 import { argmaxRandom, pick, type Agent } from "./agent";
 import { RandomDeployer, fixedDeployer, withDeployer } from "./deploy";
-import { evaluate } from "./evaluate";
+import { evaluate, type EvalOptions } from "./evaluate";
 
 /** The floor. Anything that cannot beat this is broken, not merely weak. */
 export const RandomAgent: Agent = {
@@ -44,37 +44,40 @@ export const GreedyAgent: Agent = {
 };
 
 /**
+ * The agents that pick by the evaluation differ in one thing only: how it scores
+ * facing. So they are one function — the option the evaluation likes best, one
+ * activation deep — and each carries the options it scores with, so that
+ * `agentByName` can rebuild it with different ones.
+ *
+ * `sign` is −1 for `anti`, which takes the option the evaluation likes least.
+ */
+export type ScoringAgent = Agent & { scoring: { opts: EvalOptions; sign: number } };
+
+export function scoringAgent(name: string, opts: EvalOptions, sign = 1): ScoringAgent {
+  return {
+    name,
+    scoring: { opts, sign },
+    choose(state, rng) {
+      const acts = legalActivations(state);
+      if (!acts.length) return null;
+      const me = state.turn;
+      return argmaxRandom(acts, (a) => sign * evaluate(applyActivation(state, a), me, opts), rng);
+    },
+  };
+}
+
+/**
  * Heuristic: one activation deep, scored by the full evaluation rather than by
  * immediate damage — so it values position, facing and terrain, not just trades.
  * This is the eval that alpha-beta will reuse at greater depth.
  */
-export const HeuristicAgent: Agent = {
-  name: "heuristic",
-  choose(state, rng) {
-    const acts = legalActivations(state);
-    if (!acts.length) return null;
-    const me = state.turn;
-    return argmaxRandom(acts, (a) => evaluate(applyActivation(state, a), me), rng);
-  },
-};
+export const HeuristicAgent = scoringAgent("heuristic", { facing: "current" });
 
 /**
  * H1: identical to heuristic except that its facing term guards against every
  * direction a blow could come from next turn, not only enemies already in reach.
  */
-export const HeuristicFacingAgent: Agent = {
-  name: "heuristic-facing",
-  choose(state, rng) {
-    const acts = legalActivations(state);
-    if (!acts.length) return null;
-    const me = state.turn;
-    return argmaxRandom(
-      acts,
-      (a) => evaluate(applyActivation(state, a), me, { facing: "next-turn" }),
-      rng,
-    );
-  },
-};
+export const HeuristicFacingAgent = scoringAgent("heuristic-facing", { facing: "next-turn" });
 
 /**
  * H1b: `heuristic-facing` with the enemy half of its facing term dropped. It
@@ -82,34 +85,14 @@ export const HeuristicFacingAgent: Agent = {
  * enemy's — whose weak side, the argument goes, is one they can turn away from
  * before this agent moves again (heuristics.md, H1b).
  */
-export const HeuristicFacingOwnAgent: Agent = {
-  name: "heuristic-facing-own",
-  choose(state, rng) {
-    const acts = legalActivations(state);
-    if (!acts.length) return null;
-    const me = state.turn;
-    return argmaxRandom(
-      acts,
-      (a) => evaluate(applyActivation(state, a), me, { facing: "next-turn-own" }),
-      rng,
-    );
-  },
-};
+export const HeuristicFacingOwnAgent = scoringAgent("heuristic-facing-own", { facing: "next-turn-own" });
 
 /**
  * Deliberately awful: always takes the option the heuristic likes least.
  * Not a contender — a control. If the ladder is measuring anything real, this
  * has to sit clearly below random.
  */
-export const AntiAgent: Agent = {
-  name: "anti",
-  choose(state, rng) {
-    const acts = legalActivations(state);
-    if (!acts.length) return null;
-    const me = state.turn;
-    return argmaxRandom(acts, (a) => -evaluate(applyActivation(state, a), me), rng);
-  },
-};
+export const AntiAgent = scoringAgent("anti", { facing: "current" }, -1);
 
 /** Attacks whenever it can, otherwise closes on the nearest enemy. */
 export const AggressiveAgent: Agent = {
@@ -145,9 +128,12 @@ export const AGENTS: Record<string, Agent> = {
 
 /**
  * An agent by name, with options after colons: `heuristic`, `heuristic:deploy=random`,
- * `greedy:deploy=burrower@b1N+clawstrider@c1N+…`. `deploy` takes `random`, an
- * arrangement key (deploy.ts), or `centred` — the arena's default rule, which is
- * simply the plain agent.
+ * `greedy:deploy=burrower@b1N+clawstrider@c1N+…`, `heuristic-facing-own:w=2`.
+ *
+ *  - `deploy` takes `random`, an arrangement key (deploy.ts), or `centred` — the
+ *    arena's default rule, which is simply the plain agent.
+ *  - `w` scales the facing weights on an agent that scores with the evaluation
+ *    (H2). `w=1` is the plain agent, so it keeps its name and its results.
  */
 export const agentByName = (spec: string): Agent => {
   const [name, ...options] = spec.split(":");
@@ -155,9 +141,20 @@ export const agentByName = (spec: string): Agent => {
   if (!agent) throw new Error(`Unknown agent "${name}". Known: ${Object.keys(AGENTS).join(", ")}`);
   for (const option of options) {
     const [key, value] = [option.slice(0, option.indexOf("=")), option.slice(option.indexOf("=") + 1)];
-    if (key !== "deploy" || !option.includes("=") || !value)
-      throw new Error(`Unknown option "${option}" in "${spec}". Known: deploy=centred|random|<arrangement>.`);
-    if (value === "centred") agent = AGENTS[name];
+    if (!option.includes("=") || !value || (key !== "deploy" && key !== "w"))
+      throw new Error(
+        `Unknown option "${option}" in "${spec}". Known: deploy=centred|random|<arrangement>, w=<number>.`,
+      );
+    if (key === "w") {
+      const scale = Number(value);
+      const scoring = (agent as ScoringAgent).scoring;
+      if (!scoring) throw new Error(`"${name}" does not score with the evaluation, so it has no weights to scale.`);
+      if (!Number.isFinite(scale) || scale < 0) throw new Error(`"w=${value}" is not a scale: it must be a number, 0 or more.`);
+      if (scale !== 1) {
+        const scaled = scoringAgent(`${agent.name}:w=${value}`, { ...scoring.opts, facingScale: scale }, scoring.sign);
+        agent = agent.deploy ? { ...scaled, deploy: agent.deploy } : scaled;
+      }
+    } else if (value === "centred") agent = AGENTS[name];
     else agent = withDeployer(agent, value === "random" ? RandomDeployer : fixedDeployer(value));
   }
   return agent;

@@ -47,7 +47,16 @@ function sideToward(defender: Piece, attacker: Piece): "F" | "B" | "L" | "R" {
  *                 mostly isn't there.
  * Nothing else in the evaluation differs between them.
  */
-export type EvalOptions = { facing: "current" | "next-turn" | "next-turn-own" };
+export type EvalOptions = {
+  facing: "current" | "next-turn" | "next-turn-own";
+  /**
+   * Multiplier on both facing weights, their 2:1 ratio untouched (H2). The
+   * weights were set for a term that fired once a game; the next-turn term
+   * fires on every machine every turn. 1 leaves WEIGHTS as they stand; 0
+   * removes facing scoring altogether.
+   */
+  facingScale?: number;
+};
 
 export function evaluate(
   s: GameState,
@@ -59,6 +68,7 @@ export function evaluate(
   if (s.winner === "draw") return 0;
 
   const them = other(me);
+  const facingScale = opts.facingScale ?? 1;
   const blight = corruptedTiles(s.grid.length, s.corruption);
   let score = (s.vp[me] - s.vp[them]) * WEIGHTS.victoryPoint;
 
@@ -108,7 +118,7 @@ export function evaluate(
           ? WEIGHTS.armourPresented
           : 0;
       // A weak side exposed is bad for the victim's owner.
-      score += (victim.owner === me ? 1 : -1) * exposure;
+      score += (victim.owner === me ? 1 : -1) * exposure * facingScale;
     }
   }
 
@@ -127,7 +137,7 @@ export function evaluate(
           : vm.armor.includes(side)
             ? WEIGHTS.armourPresented
             : 0;
-        score += (victim.owner === me ? 1 : -1) * exposure;
+        score += (victim.owner === me ? 1 : -1) * exposure * facingScale;
       }
     }
   }

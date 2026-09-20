@@ -10,7 +10,7 @@
   },
   "scripts": {
     "arena": "node --import tsx src/cli.ts",
-    "test": "tsx test/replay.ts && tsx test/sets.ts && tsx test/store.ts && tsx test/deploy.ts"
+    "test": "tsx test/replay.ts && tsx test/sets.ts && tsx test/store.ts && tsx test/deploy.ts && tsx test/agents.ts"
   },
   "dependencies": {
     "@ms/engine": "*",

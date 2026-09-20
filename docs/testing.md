@@ -16,8 +16,8 @@ npm test
 npm run test:fuzz:deep
 ```
 
-`npm test` typechecks first (§5), then runs the three engine suites and the arena's replay, set, store and
-deployment tests — under twenty seconds in all. `test:fuzz:deep` runs 5000 games instead of 400.
+`npm test` typechecks first (§5), then runs the three engine suites and the arena's replay, set, store,
+deployment and agent tests — under twenty seconds in all. `test:fuzz:deep` runs 5000 games instead of 400.
 
 ---
 
@@ -33,6 +33,7 @@ They fail in different ways on purpose. Each catches a class of bug the others s
 | **Replay** | `packages/arena/test/replay.ts` | Recorded games failing to re-execute exactly, and the replay checks failing to notice when they don't | Anything the recorded games happen not to exercise |
 | **Sets** | `packages/arena/test/sets.ts` | A set missing from the enumeration, or any legal set deploying illegally on any board | Whether the deployment rule is a *good* one |
 | **Store** | `packages/arena/test/store.ts` | A stored result answering for a game it isn't, or a sweep replaying what it already has | Games the store has never been asked about |
+| **Agents** | `packages/arena/test/agents.ts` | An option on an agent's name changing a game it shouldn't, or nonsense being accepted instead of refused | Whether any agent plays *well* |
 | **Deploy** | `packages/arena/test/deploy.ts` | An agent's choice of starting squares being accepted when illegal, changing a game it shouldn't, or getting lost on the way to a replay or the store | Whether a deployment is any *good* |
 
 The division earns its keep. The Dash landing bug in §4 was invisible to golden tests (nobody thought to write
