@@ -23,7 +23,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from "node:os";
 import { relative, resolve } from "node:path";
 import { AGENTS, agentByName } from "@ms/ai";
-import { BOARDS, resolveBoards } from "./boards";
+import { BOARDS, NOT_IN_ROTATION, resolveBoards } from "./boards";
 import { playGame, playMatch, type MatchResult } from "./match";
 import { fitElo, formatTable } from "./elo";
 import { gameMetrics, rebuild, recordGame, type GameMetrics } from "./replay";
@@ -267,7 +267,7 @@ switch (cmd) {
         `an agent can be told how to deploy: heuristic:deploy=random, heuristic:deploy=centred (the default),\n` +
         `or an arrangement written from its own seat, e.g. greedy:deploy=burrower@b1N+clawstrider@c1N+…\n\n` +
         `agents: ${Object.keys(AGENTS).join(", ")}\n` +
-        `boards: ${Object.keys(BOARDS).join(", ")}\n` +
+        `boards: ${Object.keys(BOARDS).map((b) => (NOT_IN_ROTATION.has(b) ? `${b} (not in --board all)` : b)).join(", ")}\n` +
         `teams:  ${Object.keys(TEAMS).join(", ")}   (legal sets: ${fmt(allSetKeys().length)})`,
     );
 }

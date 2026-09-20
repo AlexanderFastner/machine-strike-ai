@@ -10,7 +10,7 @@ import { MACHINE_BY_ID, MAX_COPIES, TEAM_POINTS, parseBoard } from "@ms/engine";
 import {
   allSetKeys, defaultDeployment, describeStep, parseSetKey, rebuild, recordGame, resolveTeam, sampleSets, setKey,
 } from "../src/index.ts";
-import { BOARDS } from "../src/boards.ts";
+import { BOARDS, NOT_IN_ROTATION, resolveBoards } from "../src/boards.ts";
 import { opponentOf } from "../src/sweep.ts";
 
 let pass = 0, fail = 0;
@@ -78,6 +78,12 @@ eq("draft-book names resolve", setKey(resolveTeam("standard")), "burrower+clawst
 throws("an 11-point set is refused", () => resolveTeam("ravager+clawstrider+charger+grazer+burrower"), "totals 11");
 throws("five copies are refused", () => resolveTeam("burrower:5+grazer:5"), "copies");
 throws("an unknown machine is refused", () => resolveTeam("burrower+dragon"), "not a machine");
+
+// --- the testing rotation ----------------------------------------------------------
+eq("Flat is out of the rotation", resolveBoards("all").includes("flat"), false);
+eq("but is still a board, and still runs when named", [!!BOARDS.flat, resolveBoards("flat")], [true, ["flat"]]);
+eq("every other board is in it", resolveBoards("all").length, Object.keys(BOARDS).length - NOT_IN_ROTATION.size);
+eq("and deployment still has to work on all of them", Object.keys(BOARDS).length, 6);
 
 // --- deployment: every set, every board ------------------------------------------
 {

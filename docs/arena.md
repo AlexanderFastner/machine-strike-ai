@@ -25,7 +25,8 @@ sets — and `report` reads results back. `match`, `tournament` and `sweep` keep
 store**, and answer from it when a game has already been played under the same code; `record --game` turns a
 stored result back into a replay. All of that is in [results.md](results.md).
 
-Flags: `--board`, `--team` (a draft-book name, or any set written as a key such as
+Flags: `--board` (a name, a comma-separated list, or `all` — the five boards with terrain; **Flat** is all
+grassland and sits out the rotation, though naming it still runs it), `--team` (a draft-book name, or any set written as a key such as
 `burrower:4+grazer:4+scrounger:2`), `--corruption on|off`, `--seed`, `--pairs`, `--agents a,b,c`; and for the
 store, `--db <file>`, `--no-store`, `--label <text>`.
 

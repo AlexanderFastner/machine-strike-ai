@@ -22,9 +22,24 @@ export const BOARDS: Record<string, BoardFile> = Object.fromEntries(
     .map((b) => [b.id, b]),
 );
 
+/**
+ * Boards left out of the rotation: `--board all` skips them, though they are
+ * still boards, still in the game, and still run if you name one.
+ *
+ * **Flat** is all grassland. Terrain is the defender's entire Combat Power, so a
+ * board with none of it has no position worth taking and nothing tactical to
+ * measure — every result it produces is about combat maths, which the engine's
+ * own tests already pin down. It stays as that baseline, and as a neutral grid
+ * for tests that want terrain out of the way.
+ */
+export const NOT_IN_ROTATION = new Set(["flat"]);
+
+/** The boards agent and set experiments rotate over. */
+export const ROTATION = Object.keys(BOARDS).filter((id) => !NOT_IN_ROTATION.has(id));
+
 /** `name`, `a,b,c` or `all`. Unknown names fail loudly rather than falling back to a default. */
 export function resolveBoards(spec: string): string[] {
-  const names = spec === "all" ? Object.keys(BOARDS) : spec.split(",").map((s) => s.trim());
+  const names = spec === "all" ? ROTATION : spec.split(",").map((s) => s.trim());
   for (const n of names)
     if (!BOARDS[n]) throw new Error(`Unknown board "${n}". Known: ${Object.keys(BOARDS).join(", ")}`);
   return names;

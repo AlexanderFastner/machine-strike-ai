@@ -102,8 +102,10 @@ The last stage takes a **new seed on purpose**. The finalists were *chosen* for 
 and part of that was luck, so those games flatter them — the winner's curse. Fresh opponents give an unbiased
 measurement, and `--sweep 2` reports only those.
 
-`--board all` runs the same stages on every board, with each set meeting the same opponents on each board, so
-one set's boards can be compared directly. It multiplies the cost by the number of boards.
+`--board all` runs the same stages on every board **in the rotation** — the five with terrain — with each set
+meeting the same opponents on each board, so one set's boards can be compared directly. It multiplies the cost
+by the number of boards. Flat sits out: it is all grassland, and terrain is the defender's entire Combat Power,
+so there is no position on it worth taking and nothing tactical to measure. `--board flat` still runs on it.
 
 ---
 
