@@ -409,3 +409,94 @@ Not scheduled — listed so they aren't lost:
   fire constantly, and the term now drives 37% of decisions. Weight tuning is a separate variable, so it belongs in
   its own entry — and after H1b, so the two effects can be told apart.
 
+
+---
+
+## H1b — Facing for own machines only
+
+**Question.** Does the facing-aware agent stop losing if it scores only its **own** machines' exposure — dropping
+the half of the term that rewards standing where it could strike an *enemy's* weak side next turn?
+
+**Background.** [H1](#h1--facing-aware-evaluation) made the facing term next-turn aware and kept it symmetric,
+scoring both sides' machines. The term did what it was built for — weak-side hits fell from 30.6% to 10.7%, and
+backward facing on approach moves all but vanished — and the agent lost anyway, scoring 28.0% head to head.
+
+The exploratory analysis afterwards found the enemy half **changes the chosen move in 43% of decisions**, and
+argued the two halves are not equally real: **the opponent moves next, and turning is free.** A threat against
+the agent's own weak side is one the enemy is about to use; a threat against an enemy's weak side is one that
+enemy can simply turn away from before the agent's next turn. So nearly half the time the agent may be spending
+its move setting up a threat that evaporates, instead of striking now. H1's implementation notes chose symmetry
+deliberately, on the grounds that scoring only its own machines would have been a second variable. This entry
+tests whether that choice was the mistake.
+
+### The change — one variable
+
+In `packages/ai/src/evaluate.ts`, the next-turn facing term skips machines that are not the agent's own. The
+weights, the threat map, the `threatened` / `threatening` counts and everything else are untouched. Plain
+`heuristic`'s current-reach facing term stays symmetric; only the next-turn term changes, so `heuristic-facing`
+and the new agent differ by exactly this.
+
+**New agent** `heuristic-facing-own`: `heuristic-facing` with that one line.
+
+### Hypothesis
+
+If the enemy half is what cost H1 its games, dropping it should win them back: **`heuristic-facing-own` beats
+`heuristic-facing`**, and the tempo symptoms H1 measured — declining twice as many attacks against `greedy`,
+games running a round longer, first contact half a round later — should shrink. Whether it also beats plain
+`heuristic` is the open question: that is what decides whether the whole facing-aware line is worth keeping.
+
+Weak-side hits should stay near H1's 10.7%, because the half that produces them is the half being kept.
+
+### Method
+
+- **Primary:** `heuristic-facing-own` vs `heuristic-facing`, 100 paired games (200 total), seeds 1–100.
+- **Against plain `heuristic`:** 100 pairs — whether the line is worth keeping at all.
+- **Controls, re-measured in the same run:** `heuristic-facing` vs `heuristic` (H1's own primary) and
+  `heuristic` vs `greedy`. H1's published numbers were measured under the previous deployment rule, so they are
+  not comparable to anything measured now ([arena.md](arena.md#a-sets-arrangement-changes-results)); these two
+  matchups rebuild the comparison points under the current code.
+- **Against the ladder:** `heuristic-facing-own` vs `greedy`, 100 pairs, so a gain can't be specific to one
+  opponent.
+- **Terrain check:** against plain `heuristic` on Mountains and Coastal, 50 pairs each, as H1 did.
+- **Fixed:** standard team, corruption on, the default deployment rule for both sides — no agent here chooses
+  where it starts — and arena defaults otherwise.
+
+### Metrics
+
+Written down before the code exists, so the result can't be rationalised afterwards. A miss is reported as a
+miss; the thresholds don't get re-derived.
+
+| Metric | What it measures | Success | Falsified if |
+|---|---|---|---|
+| **Score vs `heuristic-facing`** (primary) | Whether the enemy half was the problem | lower bound above **50%** | the interval includes 50% or sits below it |
+| **Score vs `heuristic`** | Whether facing-awareness is worth keeping | lower bound above **50%** | *reported either way* — this decides the line's future, not H1b's hypothesis |
+| **Weak-side hits suffered** | That the half being kept still works | below **20%**, as H1 | at or above 30% — dropping the enemy half broke the term |
+| **Score vs `greedy`** | No regression elsewhere | at least the re-measured `heuristic` control | clearly below it |
+| Attacks declined, game length, first attack | H1's tempo symptoms | *reported*; expected between `heuristic-facing` and `heuristic` | — |
+| Facing on approach moves | As H0 and H1 measured it | *reported* | — |
+| Decisions per second | The threat map still costs time | *reported*; flag if over 10× slower than `heuristic` | — |
+
+### How to read the result
+
+| vs `heuristic-facing` | vs `heuristic` | Meaning |
+|---|---|---|
+| ↑ | ↑ | The enemy half was the problem, and own-side facing is worth having. The lesson is about *which threats are real*. |
+| ↑ | flat or ↓ | Dropping it helps, but facing-awareness still costs more tempo than it gains at this depth. |
+| flat | ↓ | The enemy half wasn't the problem: the cost is in the caution itself, or in the threat map treating every enemy as able to strike. |
+| ↓ | any | The enemy half was earning its place and H1's reading was wrong — the most interesting outcome, and the one to replay games over. |
+
+### Known simplifications
+
+- **Every enemy is still treated as able to strike**, though only two machines activate per turn. H1 inherited
+  this and so does H1b; it biases the term toward caution, which is the very thing under suspicion.
+- **The games are not in the results store.** This experiment measures per-game metrics — weak-side hits, facing
+  on approach moves — that the store does not keep, so the runner plays its own games, as H1's did. They are
+  regenerable from `experiments/h1b-own-facing/run.ts`.
+
+### Status
+
+- [ ] Designed, with success and falsification criteria written before any code or results
+- [ ] `heuristic-facing-own` agent, and the one-line evaluation option behind it
+- [ ] Runner for the matchups above
+- [ ] Run them
+- [ ] Record results and findings
