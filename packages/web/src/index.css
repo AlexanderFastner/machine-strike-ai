@@ -771,3 +771,28 @@ code { font-size: 0.72rem; }
   border-top: 3px solid var(--p2);
   border-bottom: 3px solid var(--p1);
 }
+
+/* ---------- play vs AI: pick an opponent and a set ---------- */
+.vs-ai {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
+.choice-list { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.5rem; }
+.choice {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+.choice:hover { border-color: var(--muted); }
+.choice.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.choice b { display: block; font-size: 0.95rem; }
+.choice span { display: block; color: var(--muted); font-size: 0.82rem; line-height: 1.35; margin-top: 0.2rem; }
+.choice .set-row { display: flex; gap: 0.25rem; margin: 0.4rem 0 0.1rem; }

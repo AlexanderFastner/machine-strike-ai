@@ -25,7 +25,7 @@ See **[plan.md](plan.md)** for the full two-stage plan.
 
 | Working | Not yet |
 |---|---|
-| Landing → board select → hidden two-player draft → alternating deployment → play | AI opponents in the UI |
+| Landing → board select → hidden two-player draft → alternating deployment → play | Drafting your own set against the AI |
 | Full combat: Combat Power, facing, Defense Break, knockback, collisions | Random symmetric map generator |
 | All six machine types, including derived targeting | Draft options (open/alternating/bans) |
 | All fifteen skills | |
@@ -35,6 +35,7 @@ See **[plan.md](plan.md)** for the full two-stage plan.
 | **Headless arena** with five baseline agents and Elo ratings | |
 | **Replay viewer** — step through any AI game move by move, with a battle report | |
 | **Results store** — every arena game in one SQLite file; **set sweeps** measure sets against the field | |
+| **Play vs AI** — pick any of the seven agents and one of the four ready-made sets | |
 
 **Testing:** a type check, 133 golden assertions, 11 frozen perft counts, 400 seeded fuzz games, and the
 arena's replay, set, store and deployment suites — all under `npm test`. What each one checks is tracked in

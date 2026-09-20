@@ -1,5 +1,6 @@
 import { PieceToken } from "../board/PieceToken";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { makeRng, type Agent } from "@ms/ai";
 import { Board } from "../board/Board";
 import { parseBoard, type BoardFile } from "../board/terrain";
 import { PieceCard } from "./PieceCard";
@@ -7,6 +8,7 @@ import { saveGame } from "../data/saves";
 import {
   FACINGS,
   MACHINE_BY_ID,
+  applyActivation,
   ROUND_LIMIT,
   activatablePieces,
   attackWith,
@@ -39,10 +41,12 @@ type Props = {
   deployments: Deployment[];
   /** Resume a saved game instead of starting from the deployment. */
   initialState?: GameState;
+  /** Playing an agent: it takes this side's turns itself. */
+  ai?: { owner: Owner; agent: Agent };
   onQuit: () => void;
 };
 
-export function Game({ board, corruption, deployments, initialState, onQuit }: Props) {
+export function Game({ board, corruption, deployments, initialState, ai, onQuit }: Props) {
   // Only the *starting* grid; terrain is mutable, so everything else reads state.grid.
   const startGrid = useMemo(() => parseBoard(board), [board]);
   const [state, setStateRaw] = useState<GameState>(
@@ -60,12 +64,47 @@ export function Game({ board, corruption, deployments, initialState, onQuit }: P
     setStateRaw(next);
   };
 
+  /**
+   * Undo steps back one state — but against an agent it steps back past the
+   * agent's whole turn, to the last position that was yours. Stopping inside its
+   * turn would only hand the move straight back to it.
+   */
   function undo() {
-    if (history.length === 0) return;
-    setStateRaw(history[history.length - 1]);
-    setHistory((h) => h.slice(0, -1));
+    if (history.length === 0 || thinking) return;
+    let rest = history;
+    let back = rest[rest.length - 1];
+    while (ai && rest.length > 1 && back.turn === ai.owner) {
+      rest = rest.slice(0, -1);
+      back = rest[rest.length - 1];
+    }
+    setStateRaw(back);
+    setHistory(rest.slice(0, -1));
     clearActivation();
   }
+
+  /**
+   * The agent's turn. One activation per tick, with a pause between them, so its
+   * turn can be watched rather than appearing all at once. It goes through
+   * `applyActivation` — the engine path the arena and every test use — rather
+   * than the move-by-move path this screen drives for a human.
+   */
+  const rng = useRef(makeRng(Math.floor(Math.random() * 2 ** 31)));
+  const [thinking, setThinking] = useState(false);
+  const aiToMove = !!ai && !state.winner && state.turn === ai.owner;
+
+  useEffect(() => {
+    if (!ai || !aiToMove) {
+      setThinking(false);
+      return;
+    }
+    setThinking(true);
+    const id = setTimeout(() => {
+      const act = ai.agent.choose(state, rng.current);
+      setState(act ? applyActivation(state, act) : endTurn(state));
+      setSelectedUid(null);
+    }, 500);
+    return () => clearTimeout(id);
+  }, [ai, aiToMove, state]);
 
   function save() {
     const ok = saveGame(board, corruption, state);
@@ -123,7 +162,7 @@ export function Game({ board, corruption, deployments, initialState, onQuit }: P
         e.preventDefault();
         return undo();
       }
-      if (!selected || state.winner) return;
+      if (!selected || state.winner || aiToMove) return;
       if (k === "e") {
         const next = ALL_FACINGS[(ALL_FACINGS.indexOf(selected.facing) + 1) % 4];
         setState(rotatePiece(state, selected.uid, next));
@@ -173,6 +212,7 @@ export function Game({ board, corruption, deployments, initialState, onQuit }: P
   };
 
   function clickTile(row: number, col: number) {
+    if (aiToMove) return;
     const occupant = state.pieces.find((p) => p.row === row && p.col === col);
     if (occupant && occupant.owner === state.turn && occupant.uid !== selectedUid) {
       selectPiece(occupant.uid);
@@ -221,11 +261,17 @@ export function Game({ board, corruption, deployments, initialState, onQuit }: P
   return (
     <div className="screen wide">
       <div className="hud">
-        <Score state={state} owner={1} />
+        <Score state={state} owner={1} label={ai ? (ai.owner === 1 ? ai.agent.name : "You") : undefined} />
         <div className="hud-mid">
           <span className="round">Round {state.round}</span>
           <span className={`turn-badge who p${state.turn}`}>
-            {state.winner ? "Game over" : `Player ${state.turn} to move`}
+            {state.winner
+              ? "Game over"
+              : ai
+                ? aiToMove
+                  ? `${ai.agent.name} is thinking…`
+                  : "Your move"
+                : `Player ${state.turn} to move`}
           </span>
           <span className="round">
             {state.activationsLeft} activation{state.activationsLeft === 1 ? "" : "s"} left
@@ -239,7 +285,7 @@ export function Game({ board, corruption, deployments, initialState, onQuit }: P
             <span className="round">Round limit {ROUND_LIMIT}</span>
           )}
         </div>
-        <Score state={state} owner={2} />
+        <Score state={state} owner={2} label={ai ? (ai.owner === 2 ? ai.agent.name : "You") : undefined} />
       </div>
 
       <div className="game-layout">
@@ -421,7 +467,7 @@ export function Game({ board, corruption, deployments, initialState, onQuit }: P
             <button onClick={onQuit}>Quit</button>
             {!state.winner && (
               <button
-                disabled={mustAct}
+                disabled={mustAct || aiToMove}
                 title={mustAct ? "You must use every activation you can" : undefined}
                 onClick={() => {
                   setState(endTurn(state));
@@ -446,11 +492,11 @@ export function Game({ board, corruption, deployments, initialState, onQuit }: P
   );
 }
 
-function Score({ state, owner }: { state: GameState; owner: Owner }) {
+function Score({ state, owner, label }: { state: GameState; owner: Owner; label?: string }) {
   const alive = state.pieces.filter((p) => p.owner === owner);
   return (
     <div className={`score who p${owner}`}>
-      <b>Player {owner}</b>
+      <b>{label ?? `Player ${owner}`}</b>
       <span className="vp">{state.vp[owner]} / 7 VP</span>
       <span className="alive">{alive.length} machines</span>
     </div>

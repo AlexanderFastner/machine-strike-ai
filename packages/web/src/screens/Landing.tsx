@@ -2,12 +2,13 @@ import { hasSave } from "../data/saves";
 
 type Props = {
   onPlay: () => void;
+  onPlayAI: () => void;
   onEdit: () => void;
   onWatch: () => void;
   onContinue: () => void;
 };
 
-export function Landing({ onPlay, onEdit, onWatch, onContinue }: Props) {
+export function Landing({ onPlay, onPlayAI, onEdit, onWatch, onContinue }: Props) {
   const resumable = hasSave();
 
   return (
@@ -24,7 +25,7 @@ export function Landing({ onPlay, onEdit, onWatch, onContinue }: Props) {
             Continue saved game
           </button>
         )}
-        <button className="big" disabled title="Not built yet">
+        <button className="primary big" onClick={onPlayAI}>
           Play vs AI
         </button>
       </div>

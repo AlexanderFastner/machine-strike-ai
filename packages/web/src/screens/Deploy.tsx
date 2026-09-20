@@ -10,6 +10,8 @@ type Props = {
   teams: Record<Owner, Team>;
   onDone: (placed: DeployPiece[]) => void;
   onBack: () => void;
+  /** Playing an agent: its machines are already placed, and only the other side is yours to put down. */
+  opponent?: { owner: Owner; placed: DeployPiece[]; name: string };
 };
 
 export type DeployPiece = PlacedPiece & { poolIndex: number };
@@ -18,11 +20,12 @@ export type DeployPiece = PlacedPiece & { poolIndex: number };
 const deployRows = (owner: Owner, size: number) =>
   owner === 1 ? [size - 2, size - 1] : [0, 1];
 
-export function Deploy({ board, teams, onDone, onBack }: Props) {
+export function Deploy({ board, teams, onDone, onBack, opponent }: Props) {
   const grid = parseBoard(board);
   const size = grid.length;
 
-  const [placed, setPlaced] = useState<DeployPiece[]>([]);
+  // An agent's machines start on the board: its side has already chosen.
+  const [placed, setPlaced] = useState<DeployPiece[]>(() => opponent?.placed ?? []);
   const [selected, setSelected] = useState<{ owner: Owner; i: number } | null>(null);
 
   const remainingFor = (owner: Owner) =>
@@ -45,6 +48,7 @@ export function Deploy({ board, teams, onDone, onBack }: Props) {
 
   function clickTile(row: number, col: number) {
     const here = placed.find((p) => p.row === row && p.col === col);
+    if (here && here.owner === opponent?.owner) return; // not yours to move
     if (here) {
       setPlaced((ps) => ps.filter((p) => p !== here));
       setSelected({ owner: here.owner, i: here.poolIndex });
@@ -98,13 +102,15 @@ export function Deploy({ board, teams, onDone, onBack }: Props) {
           <p className="turn-note">
             {done
               ? "Click a placed machine to pick it up again."
-              : "Players alternate one machine at a time. Once a side is finished, the other places the rest back to back."}
+              : opponent
+                ? `Place your machines anywhere in your back two rows. ${opponent.name} has already placed its own.`
+                : "Players alternate one machine at a time. Once a side is finished, the other places the rest back to back."}
           </p>
 
-          {([1, 2] as Owner[]).map((o) => (
+          {([1, 2] as Owner[]).filter((o) => o !== opponent?.owner).map((o) => (
             <div key={o} className="pool-group">
               <h3 className={`tray-title who p${o}`}>
-                Player {o} · {left[o].length} left
+                {opponent ? "Your machines" : `Player ${o}`} · {left[o].length} left
               </h3>
               <ul className="pool">
                 {left[o].map(({ id, i }) => {

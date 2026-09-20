@@ -165,6 +165,10 @@ All three use z = 1.96, the two-sided 95% normal quantile. The code is `matchup(
 | `heuristic-facing` | `heuristic` with facing scored against next-turn threats. The subject of [H1](heuristics.md#h1--facing-aware-evaluation) — it takes far fewer weak-side hits and loses to `heuristic`. |
 | `heuristic-facing-own` | The same, with the half that guards *enemy* facing dropped. [H1b](heuristics.md#h1b--facing-for-own-machines-only) — level with `heuristic` on Plains and Forests, behind it on Mountains and Coastal. |
 
+All seven are playable in the browser: **Play vs AI** on the landing page, where you pick the opponent and one
+of the draft-book sets, deploy your own machines against its, and it answers through the same
+`applyActivation` path the arena and every test use.
+
 `anti` earns its place. If the ladder were measuring noise rather than skill, it would not sit clearly at the
 bottom; that it does is evidence the instrument works.
 
