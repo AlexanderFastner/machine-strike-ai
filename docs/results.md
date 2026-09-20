@@ -258,6 +258,11 @@ Python reads the file directly with the standard library's `sqlite3`, or with `p
 
 ## Known gaps
 
+- [ ] **Evolutionary search over starting positions**, and later over sets. The parts are in place — an
+      arrangement is a genome (`fixedDeployer`), fitness is a paired match against a baseline or the population,
+      and the store keys games on the arrangement, so a candidate seen twice is free. The search itself isn't
+      written. Worth doing per board: a random arrangement already beats the default rule on one board and not
+      on others ([arena.md](arena.md#starting-positions-already-matter-to-heuristic--and-depend-on-the-board)).
 - [ ] **A strength model per machine.** `report machines` is descriptive. A regression of outcome on set
       composition would say what each machine is worth with its partners held fixed, and would predict the score
       of sets that have never been played.
