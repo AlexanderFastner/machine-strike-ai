@@ -652,8 +652,74 @@ lookahead, facing scoring of any kind is not what wins.
 
 ### Status
 
-- [ ] Designed, with success and falsification criteria written before any code or results
-- [ ] `facingScale` in the evaluation, and `:w=<k>` on any agent that uses it
-- [ ] Runner for the search, the confirmation and the terrain check
-- [ ] Run them
-- [ ] Record results and findings
+- [x] Designed, with success and falsification criteria written before any code or results
+- [x] `facingScale` in the evaluation, and `:w=<k>` on any agent that uses it
+- [x] Runner for the search, the confirmation and the terrain check
+- [x] Run them — 2,000 games, 0 replay problems
+- [x] Record results and findings
+
+### Results
+
+**H2 is falsified: no scale beats the weights already there.** The grid picked `w=1` — the unscaled agent — and
+on fresh seeds it lands at 46.5%, an interval that still includes 50%. The weights were not what was wrong.
+
+Measured at commit `5118620`. Full tables:
+[`experiments/h2-facing-weights/results.md`](../experiments/h2-facing-weights/results.md), regenerated with
+`node --import tsx experiments/h2-facing-weights/run.ts`.
+
+The search, which selects and is not evidence — each scale against `heuristic`, seeds 1–100:
+
+| Scale | Score vs `heuristic` | 95% interval | Weak-side hits | Games it played differently from `w=1` |
+|---|---|---|---|---|
+| `w=0` — no facing term at all | 46.0% | 39.7 – 52.3% | **44.5%** | 200 of 200 |
+| `w=0.25` | 27.0% | 21.2 – 32.8% | 17.4% | 200 of 200 |
+| `w=0.5` | 40.5% | 33.2 – 47.8% | 13.8% | 186 of 200 |
+| **`w=1`** — the weights as they stand | **50.5%** | 44.3 – 56.7% | 8.4% | — |
+| `w=2` | 42.5% | 36.7 – 48.3% | 8.0% | 104 of 200 |
+| `w=4` | 40.5% | 34.5 – 46.5% | 7.5% | 122 of 200 |
+
+| Criterion | Registered | Result | Verdict |
+|---|---|---|---|
+| **Confirmation: selected `k` vs `heuristic`** (primary) | lower bound above 50% | `w=1`, **46.5%** (39.5 – 53.5%) on seeds 1001–1100 | **Falsified** |
+| **Confirmation: selected `k` vs `k = 1`** | lower bound above 50% | — the grid selected `k = 1`, so there was nothing to confirm it against | Not applicable |
+| **`k = 0` vs `heuristic`** | reported | **46.0%** (39.7 – 52.3%), while taking **44.5%** of its hits on a weak side | Reported — see finding 2 |
+| **Weak-side hits across the grid** | reported; expected to climb as `k` falls | 7.5% → 44.5% as the scale falls from 4 to 0, monotonically | Reported |
+| Decisions per second | reported | 21–25 at every scale, against `heuristic`'s 140–148 | Reported |
+
+Terrain, fresh seeds: **43.0%** (32.2 – 53.8) on Mountains and **41.0%** (30.3 – 51.7) on Coastal — the same
+direction H1b found, with intervals that now touch 50%.
+
+### Findings
+
+**1. The weights were not the problem.** Every scale tried is worse than the one that was there, and the one
+that was there is level with an agent that has no next-turn facing term at all. The pre-registered reading of a
+flat result applies: the term is worth about what it costs at any price, and facing goes back in the queue
+behind search. Three entries have now each removed one explanation for H1's loss — the threat map (H1: it
+works), the enemy half (H1b: it cost twenty points), and the weights (H2: they were already the best of six).
+What is left is the depth.
+
+**2. Weak-side exposure costs far less than it looks.** `w=0` takes **44.5%** of its hits on a weak side —
+nearly double plain `heuristic`'s 23.6%, and five times what `w=1` allows — and still scores 46.0% against it.
+Doubling the rate at which you are hit where it hurts most is worth about four points of score. That is the
+number to weigh against every future facing idea, and it explains H1, H1b and H2 at once: the term measures
+something real and small. In a game decided in five rounds by Attack-4 machines one-shotting 1-point machines,
+the side that strikes first decides more than the side that is struck well.
+
+**3. A quarter scale is worse than none — in the search.** `w=0.25` scores 27.0% (21.2 – 32.8), below both
+`w=0` and `w=0.5`, whose intervals it does not touch. It cuts weak-side hits to 17.4%, so the term is working;
+it just pays for the caution without buying enough of the protection. This sits in the search stage, which
+selects rather than proves, so it is recorded as an oddity worth a look, not a result.
+
+**4. The scale changes fewer games as it rises.** `w=0` and `w=0.25` change every game against `heuristic`;
+`w=2` changes 104 of 200 and `w=4` changes 122. Beyond about `w=1` the term already wins the comparisons it is
+going to win, and multiplying it changes only which of the remaining close calls flip. A weight has a ceiling
+past which it stops buying decisions.
+
+### Candidates this surfaced
+
+- **Depth, not terms.** Three entries have priced the facing term from every side and it stays small. The plan's
+  next rung — alpha-beta with this evaluation — is where the answer now is (plan.md phase 5).
+- **Price the other weights the same way.** `w=0` cost four points; the same one-line scale on `threatened` /
+  `threatening`, or on `terrain`, would say what each term is actually worth. Cheap, and it would tell us which
+  terms a tuner should bother with.
+- **Why a quarter scale is worst.** Finding 3, if it survives a confirmation run.
