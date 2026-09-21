@@ -76,6 +76,35 @@ const game = (a: string, b: string, seed: number) =>
     (agentByName("heuristic:vp=0:health=2") as ScoringAgent).scoring.opts.scale, { vp: 0, health: 2 });
 }
 
+// --- the two halves of the threat term (H4) ------------------------------------------
+{
+  const mountains = { board: BOARDS.mountains, teams: mirror(TEAMS.standard), corruption: true };
+  const onMountains = (a: string, b: string, seed: number) =>
+    playGame(agentByName(a), agentByName(b), mountains, seed).checksum;
+  const seeds = [4, 12, 19, 23];
+
+  eq("each half takes a scale of its own",
+    ["threatened", "threatening"].map((t) => agentByName(`heuristic:${t}=0`).name),
+    ["heuristic:threatened=0", "heuristic:threatening=0"]);
+  // The instrument check H4 registers: splitting the term must not have moved the
+  // plain agent, or nothing measured here compares with what H3 measured.
+  eq("both halves at 1 play the plain agent's game, every seed",
+    seeds.map((seed) => onMountains("heuristic:threatened=1:threatening=1", "greedy", seed)),
+    seeds.map((seed) => onMountains("heuristic", "greedy", seed)));
+  eq("switching off both halves is the same as switching off the pair",
+    seeds.map((seed) => onMountains("heuristic:threatened=0:threatening=0", "greedy", seed)),
+    seeds.map((seed) => onMountains("heuristic:threat=0", "greedy", seed)));
+  // And the halves are genuinely separate: each one alone has to play differently
+  // from the pair, or the split measures nothing.
+  const differsFromPair = (spec: string) =>
+    seeds.filter((seed) => onMountains(spec, "greedy", seed) !== onMountains("heuristic:threat=0", "greedy", seed)).length;
+  eq("threatened=0 alone is not threat=0", differsFromPair("heuristic:threatened=0") > 0, true);
+  eq("threatening=0 alone is not threat=0", differsFromPair("heuristic:threatening=0") > 0, true);
+  // threat= scales what is left, so the two multiply.
+  eq("threat= still scales both halves",
+    (agentByName("heuristic:threat=2:threatened=0") as ScoringAgent).scoring.opts.scale, { threat: 2, threatened: 0 });
+}
+
 // --- nonsense is refused ------------------------------------------------------------
 throws("a scale that is not a number", () => agentByName("heuristic:w=x"), "is not a scale");
 throws("a negative scale", () => agentByName("heuristic:w=-1"), "is not a scale");

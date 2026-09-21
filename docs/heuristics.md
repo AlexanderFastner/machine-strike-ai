@@ -954,8 +954,8 @@ Intervals are ±1.96·sd/√n over pair scores, the experiment formula in
 
 ### Status
 
-- [ ] Designed, with the hypotheses and the instrument checks written before any code or results
-- [ ] A scale per half of the threat term
-- [ ] Runner
+- [x] Designed, with the hypotheses and the instrument checks written before any code or results
+- [x] A scale per half of the threat term
+- [x] Runner
 - [ ] Run it
 - [ ] Record results and findings

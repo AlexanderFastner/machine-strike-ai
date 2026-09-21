@@ -51,12 +51,19 @@ function sideToward(defender: Piece, attacker: Piece): "F" | "B" | "L" | "R" {
  * The weights, in the groups a term is scored by. A scale on a group multiplies
  * its weights and leaves their ratios alone, so a term can be switched off or
  * amplified without touching the rest of the evaluation (H2, H3).
+ *
+ * `threatened` and `threatening` are the two halves of `threat`, each scalable
+ * on its own and each also scaled by `threat` — so H3's `threat=k` still means
+ * what it meant, and H4 can ask which half of it does the damage. They are the
+ * only groups here that overlap.
  */
 export const TERMS = {
   vp: ["victoryPoint"],
   health: ["health"],
   terrain: ["terrain"],
   threat: ["threatened", "threatening"],
+  threatened: ["threatened"],
+  threatening: ["threatening"],
   facing: ["weakSideExposed", "armourPresented"],
   blight: ["inBlight"],
   advance: ["advance"],
@@ -124,7 +131,9 @@ export function evaluate(
       if (!env.tiles.has(`${victim.row},${victim.col}`)) continue;
 
       const iAmAttacking = attacker.owner === me;
-      score += (iAmAttacking ? WEIGHTS.threatening : WEIGHTS.threatened) * k("threat");
+      score += k("threat") * (iAmAttacking
+        ? WEIGHTS.threatening * k("threatening")
+        : WEIGHTS.threatened * k("threatened"));
       if (opts.facing !== "current") continue;
 
       const vm = MACHINE_BY_ID[victim.machineId];

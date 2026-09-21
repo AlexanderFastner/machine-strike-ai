@@ -134,9 +134,10 @@ export const AGENTS: Record<string, Agent> = {
  *    arena's default rule, which is simply the plain agent.
  *  - a term name — `vp`, `health`, `terrain`, `threat`, `facing`, `blight`,
  *    `advance` — scales that term's weights on an agent that scores with the
- *    evaluation: `heuristic:terrain=0`, `heuristic:threat=2` (H3). `w` is the
- *    alias for `facing` that H2 used. A scale of 1 is the plain agent, so it
- *    keeps its name and its results.
+ *    evaluation: `heuristic:terrain=0`, `heuristic:threat=2` (H3). `threatened`
+ *    and `threatening` scale one half of `threat` each (H4). `w` is the alias
+ *    for `facing` that H2 used. A scale of 1 is the plain agent, so it keeps its
+ *    name and its results.
  */
 export const agentByName = (spec: string): Agent => {
   const [name, ...options] = spec.split(":");
