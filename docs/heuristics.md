@@ -957,5 +957,102 @@ Intervals are ±1.96·sd/√n over pair scores, the experiment formula in
 - [x] Designed, with the hypotheses and the instrument checks written before any code or results
 - [x] A scale per half of the threat term
 - [x] Runner
-- [ ] Run it
-- [ ] Record results and findings
+- [x] Run it — 3,400 games, 0 replay problems
+- [x] Record results and findings
+
+### Results
+
+**Instrument check passes:** `threatened=1,threatening=1` played **30 of 30** games identically to plain
+`heuristic`, so the split moved nothing and every number here compares with H3. Measured at commit `9aff6a2`;
+full tables in [`experiments/h4-threat-terrain/results.md`](../experiments/h4-threat-terrain/results.md). Every
+interval is ±1.96·sd/√n over pair scores ([arena.md](arena.md#reading-the-error-bars)).
+
+**The effect is real.** On Mountains, on seeds neither agent had played:
+
+| Agent, on Mountains | Games | Score | 95% interval | Gain | Rounds |
+|---|---|---|---|---|---|
+| `threat=0` — the whole term off | 200 | **64.5%** | 57.8 – 71.2 | **+14.5** | 4.3 |
+| `threatened=0` — the −5 penalty off | 200 | 57.5% | 51.1 – 63.9 | +7.5 | 4.2 |
+| `threatening=0` — the +3 bonus off | 200 | **45.0%** | 40.1 – 49.9 | **−5.0** | 4.4 |
+
+Three independent seed sets now agree that the whole term is a loss on Mountains: **69.0%** (H3, seeds 1–50),
+**64.5%** (seeds 1001–1100) and **62.0%** (seeds 2001–2050).
+
+**Dose–response — every board, 50 pairs each, seeds 2001 onwards.** The registered prediction ordered these by
+hill-and-mountain count: Mountains 22, Split Peaks / Badlands / Caldera 8, River Valley 6, the rest 0. (The
+table's own column counts every tile with a positive modifier, forest included, which is why its numbers are
+larger; both orderings put Mountains first and Flat last.)
+
+| Board | Hills + mountains | Gain from `threat=0` | 95% interval | Rounds without the term | Baseline rounds |
+|---|---|---|---|---|---|
+| Mountains | 22 | **+12.0** | 53.3 – 70.7 | 4.2 | 4.1 |
+| Caldera | 8 | +4.0 | 46.7 – 61.3 | 5.9 | 5.8 |
+| Badlands | 8 | −3.0 | 40.5 – 53.5 | 14.8 | 15.4 |
+| Split Peaks | 8 | −2.5 | 38.0 – 57.0 | 16.8 | 17.3 |
+| River Valley | 6 | +2.0 | 43.2 – 60.8 | 7.2 | 7.2 |
+| Plains and Forests | 0 | −1.0 | 42.4 – 55.6 | 5.2 | 5.4 |
+| Chasms | 0 | −2.0 | 40.1 – 55.9 | 10.2 | 10.6 |
+| Coastal | 0 | +6.0 | 48.3 – 63.7 | 4.3 | 4.2 |
+| **Flat — the control** | **0** | **+6.0** | 49.4 – 62.6 | 7.2 | 7.2 |
+
+**The scale search**, on Mountains, seeds 1–100, confirmed on 1001–1100:
+
+| `threatened` | Score | 95% interval |
+|---|---|---|
+| 0 | 63.0% | 56.5 – 69.5 |
+| 0.5 | 59.5% | 53.0 – 66.0 |
+| 2 | **43.0%** | 37.3 – 48.7 |
+| **0, confirmed on fresh seeds** | **57.5%** | 51.1 – 63.9 |
+
+Hypotheses as registered: **1 ✓** (the effect is real), **2 ✗** (the penalty is the harmful half, but it
+accounts for half the gain, not most, and the bonus is not harmless), **3 ✗** (it does not track the ground),
+**4 ✗** (removing the term does not shorten the long boards).
+
+### Findings
+
+**1. The threat term costs its owner fourteen points on Mountains, and that is now beyond doubt.** Three seed
+sets, 500 games, all agreeing. An agent that cannot see who is in whose reach beats the one that can, on the
+board made of high ground.
+
+**2. It is not one half of the term — the halves are not additive.** Removing the penalty alone gains 7.5;
+removing the bonus alone *loses* 5.0; removing both gains 14.5. So removing the penalty is worth +7.5 with the
+bonus on and +19.5 with it off, which is an interaction, not a decomposition. The reading that fits: with the
+penalty gone and the bonus kept, the agent is paid +3 for every enemy in its reach and charged nothing for
+being in theirs, which is a worse evaluation than having neither. **The term is harmful as a unit.** The
+registered claim that `threatened=0` would recover most of the gain is wrong.
+
+**3. The mechanism registered for it is not supported — Flat gains too.** The control board, which has no
+terrain at all for a flat penalty to fight, gains **+6.0** (49.4 – 62.6). Mountains gains +12.0 (53.3 – 70.7)
+and the two intervals overlap, so by this project's own rule the ordering cannot be claimed. Worse for the
+hypothesis, the predicted middle of the range is absent: Split Peaks (−2.5) and Badlands (−3.0), the two boards
+built around private peaks, came out *negative*, while Coastal (+6.0) with no high ground tied with Flat.
+Whatever the threat term is doing wrong, "it fights the terrain bonus" does not describe it.
+
+**4. This entry was underpowered exactly where it mattered.** 50 pairs per board is ±7 to ±9 points, against a
+difference of about 6 points to be separated. The registered falsification — *does Flat gain as much as
+Mountains* — has no answer from this run, only a refusal to distinguish. That is a design fault, and the
+lesson is specific: the control needed the same games as the confirmation, not a quarter of them.
+
+**5. The stand-off on the long boards is the terrain term, not the threat term.** Removing `threat` entirely
+leaves Badlands at 14.8 rounds against a 15.4 baseline and Split Peaks at 16.8 against 17.3 — no change worth
+the name. Since removing the two mountains from Badlands halves its game length
+([arena.md](arena.md#where-the-high-ground-sits-decides-how-long-a-game-lasts)), what keeps two agents sitting
+on their own peaks is what *pays* them to sit there — `terrain` × the modifier — and not what charges them to
+come down. The mechanism written up when those boards were added was wrong, and is corrected there.
+
+**6. The penalty weight is too big wherever it was measured.** `threatened=2` scores 43.0% (37.3 – 48.7) and
+`threatened=0.5` 59.5% (53.0 – 66.0): more of it is worse, less of it is better, monotonically. The search
+selected 0 at 63.0% and the confirmation came back at **57.5%** (51.1 – 63.9) — the regression toward the mean
+H2 taught this project to expect, still clear of 50%.
+
+### Candidates this surfaced
+
+- **H4b — Flat against Mountains, properly powered.** The one question H4 failed to answer. `threat=0` on both
+  boards, **200 pairs each** on fresh seeds (3001 onwards), which is ±3.5 points and enough to separate +6 from
+  +12 if they differ. Nothing else changes.
+- **Delete the threat term, or cut it hard.** It is negative or neutral on eight of nine boards and worth −14
+  on one. Before that, price it on the ladder rather than against `heuristic` alone: an agent tuned by removing
+  a term is being measured against the very opponent whose blind spot it exploits.
+- **Why does an agent that ignores threats beat one that sees them?** Finding 1 is now solid and unexplained.
+  The obvious suspect is that one-activation threat awareness is self-defeating — you cannot dodge what you
+  cannot see coming, and flinching from what you *can* see costs tempo in a game decided in four rounds.

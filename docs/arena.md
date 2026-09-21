@@ -314,11 +314,14 @@ Checked directly on Badlands, by regenerating it with one feature removed at a t
 | **the two mountains → grassland** | **7.3** |
 
 The rift is not what slows the board down; two mountains are. Removing six chasm tiles changes nothing, removing
-two mountain tiles more than halves the game. This is the behaviour the
-[H4 candidate](heuristics.md#candidates-this-surfaced) was raised to explain from the other end — `threat=0`
-gaining 19 points on Mountains — and it is the same fight between weights seen as a stand-off instead of a score: high ground pays `terrain` ×
-the tile's modifier, standing in reach costs a flat −5, and an agent holding its own peak is paid to stay
-there. A board where each side owns a peak turns that into a siege.
+two mountain tiles more than halves the game.
+
+**Corrected by [H4](heuristics.md#h4--the-threat-term-on-high-ground).** This was first written up as a fight
+between two weights — high ground pays `terrain` × the tile's modifier, standing in an enemy's reach costs a
+flat −5, so the threat term was charging an agent to come down off its own peak. H4 measured that directly and
+it is wrong: switching the threat term off entirely leaves Badlands at 14.8 rounds against a 15.4 baseline, and
+Split Peaks at 16.8 against 17.3. What keeps an agent on its peak is what **pays** it to sit there, not what
+charges it to leave. The stand-off is the `terrain` term on its own.
 
 Two consequences. Board choice is a bigger lever on a measurement than it looks — a sweep over `all` is
 averaging 4-round games with 17-round ones, and the long boards cost ~5× the compute per game. And any
