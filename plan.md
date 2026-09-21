@@ -528,7 +528,7 @@ arena puzzle --suite tactics.msn --agent minimax:depth=6
 | **0. Rules** | ✅ **Done.** `docs/rules.md`, `docs/pieces.md`, roster data, placeholder art | No blocking questions remain |
 | **1. Engine** | `packages/engine` + tests | ✅ **Done.** Rules-complete, with 123 golden assertions, 11 frozen perft counts and seeded fuzz. Perft measures **~685k activations/sec** — fast enough that the typed-array conversion is deferred until the arena proves it necessary. Coverage tracked in [docs/testing.md](docs/testing.md) |
 | **2. Hot-seat** | `packages/web` — draft, deploy, play, win | ✅ **Playable end to end.** Landing → board select (corruption toggle) → hidden two-player draft → alternating deployment → turn loop with combat, skills, blight, sprint and overcharge. Machine card, attack-range overlay, damage preview, proposed moves with keyboard confirm |
-| **3. Polish** | Undo, save/load, board library | ✅ **Done.** Threat and damage overlays, unlimited undo, save/continue, six symmetric boards, and a map editor with mirror-editing |
+| **3. Polish** | Undo, save/load, board library | ✅ **Done.** Threat and damage overlays, unlimited undo, save/continue, nine symmetric boards, and a map editor with mirror-editing |
 
 **Deferred to after the hot-seat milestone** — real features, deliberately not on the critical path:
 

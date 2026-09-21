@@ -6,11 +6,14 @@ const modules = import.meta.glob("../../../data/boards/*.json", {
   import: "default",
 }) as Record<string, BoardFile>;
 
-const ORDER = ["flat", "plains-and-forests", "coastal", "split-peaks", "mountains", "chasms"];
+/** Roughly gentlest first. A board missing from this list still shows up, at the end. */
+const ORDER = [
+  "flat", "plains-and-forests", "coastal", "river-valley", "split-peaks",
+  "mountains", "caldera", "chasms", "badlands",
+];
+const rank = (b: BoardFile) => (ORDER.indexOf(b.id) + 1 || ORDER.length + 1);
 
-export const BUILT_IN_BOARDS: BoardFile[] = Object.values(modules).sort(
-  (a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id),
-);
+export const BUILT_IN_BOARDS: BoardFile[] = Object.values(modules).sort((a, b) => rank(a) - rank(b));
 
 // --- boards the player has drawn themselves --------------------------------
 

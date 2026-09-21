@@ -1,0 +1,23 @@
+{
+  "id": "river-valley",
+  "name": "River Valley",
+  "description": "A river runs the width of the board \u2014 one row of marsh at the flanks, two in the middle, so the shortest crossing is also the widest. A bluff stands over the deep water on each side, high ground the far player can only reach the slow way.",
+  "legend": {
+    "C": "chasm",
+    "W": "marsh",
+    "G": "grassland",
+    "F": "forest",
+    "H": "hill",
+    "M": "mountain"
+  },
+  "rows": [
+    "GGGGGGGG",
+    "GGFGGFGG",
+    "GHGMFGHG",
+    "GGWWWWWW",
+    "WWWWWWGG",
+    "GHGFMGHG",
+    "GGFGGFGG",
+    "GGGGGGGG"
+  ]
+}

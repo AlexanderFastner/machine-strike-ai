@@ -65,6 +65,42 @@ BOARDS = [
                 "WGGGFGGG",
                 "GGGFGGGG"],
     },
+    {
+        "id": "river-valley",
+        "name": "River Valley",
+        "description": "A river runs the width of the board — one row of marsh at the "
+                       "flanks, two in the middle, so the shortest crossing is also the "
+                       "widest. A bluff stands over the deep water on each side, high "
+                       "ground the far player can only reach the slow way.",
+        "top": ["GGGGGGGG",
+                "GGFGGFGG",
+                "GHGMFGHG",
+                "GGWWWWWW"],
+    },
+    {
+        "id": "caldera",
+        "name": "Caldera",
+        "description": "A crater: a chasm lake ringed by peaks to the north and south and "
+                       "hills to the east and west, open at the corners. The best ground on "
+                       "the board is one knockback from the pit — and every terrain type is "
+                       "here.",
+        "top": ["GGFGGGGG",
+                "GGGGFGWG",
+                "GFGMMGGW",
+                "GWHCCHGG"],
+    },
+    {
+        "id": "badlands",
+        "name": "Badlands",
+        "description": "Broken country: a rift on one flank, a rock spur on the other, and "
+                       "the same view from either seat. Nothing is mirrored left to right, "
+                       "so the two flanks ask different questions — go round the holes, or "
+                       "climb.",
+        "top": ["GGGGGFGG",
+                "GGGFGGWG",
+                "CCGGGHMG",
+                "FCGGWHHG"],
+    },
 ]
 
 LEGEND = {"C": "chasm", "W": "marsh", "G": "grassland", "F": "forest", "H": "hill", "M": "mountain"}
@@ -85,6 +121,17 @@ def check(rows, board_id):
     # Deployment rows must be enterable by every machine, not just flyers.
     for r in (0, 1, 6, 7):
         assert "C" not in rows[r], f"{board_id}: chasm in deployment row {r}"
+    # And a machine that cannot fly must be able to reach every tile it may stand on,
+    # so no arrangement of chasms ever fences part of the board off.
+    walkable = {(r, c) for r in range(8) for c in range(8) if rows[r][c] != "C"}
+    seen, queue = {min(walkable)}, [min(walkable)]
+    while queue:
+        r, c = queue.pop()
+        for n in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+            if n in walkable and n not in seen:
+                seen.add(n)
+                queue.append(n)
+    assert seen == walkable, f"{board_id}: {len(walkable - seen)} tiles walled off by chasms"
 
 for b in BOARDS:
     rows = mirror(b["top"])

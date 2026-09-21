@@ -1,0 +1,23 @@
+{
+  "id": "caldera",
+  "name": "Caldera",
+  "description": "A crater: a chasm lake ringed by peaks to the north and south and hills to the east and west, open at the corners. The best ground on the board is one knockback from the pit \u2014 and every terrain type is here.",
+  "legend": {
+    "C": "chasm",
+    "W": "marsh",
+    "G": "grassland",
+    "F": "forest",
+    "H": "hill",
+    "M": "mountain"
+  },
+  "rows": [
+    "GGFGGGGG",
+    "GGGGFGWG",
+    "GFGMMGGW",
+    "GWHCCHGG",
+    "GGHCCHWG",
+    "WGGMMGFG",
+    "GWGFGGGG",
+    "GGGGGFGG"
+  ]
+}

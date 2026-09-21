@@ -25,7 +25,7 @@ sets — and `report` reads results back. `match`, `tournament` and `sweep` keep
 store**, and answer from it when a game has already been played under the same code; `record --game` turns a
 stored result back into a replay. All of that is in [results.md](results.md).
 
-Flags: `--board` (a name, a comma-separated list, or `all` — the five boards with terrain; **Flat** is all
+Flags: `--board` (a name, a comma-separated list, or `all` — the eight boards with terrain; **Flat** is all
 grassland and sits out the rotation, though naming it still runs it), `--team` (a draft-book name, or any set written as a key such as
 `burrower:4+grazer:4+scrounger:2`), `--corruption on|off`, `--seed`, `--pairs`, `--agents a,b,c`; and for the
 store, `--db <file>`, `--no-store`, `--label <text>`.
@@ -205,9 +205,11 @@ Things the arena has surfaced that were not obvious from the rules.
 
 ### Games are far shorter than the rules imply
 
-Competent agents finish in **4–5 rounds**. The blight needs ~32 rounds to consume the board and the no-blight
-fallback is 50. So in agent play, **corruption never happens**: the game is decided long before the endgame
-mechanic engages. Turning it off changes results by less than the error bar.
+Competent agents finish in **4–5 rounds** on the boards this was first measured on. The blight needs ~32 rounds
+to consume the board and the no-blight fallback is 50. So in agent play, **corruption usually never happens**:
+the game is decided long before the endgame mechanic engages, and turning it off changes results by less than
+the error bar. The exception is boards where each player owns high ground — those run three times as long and
+the blight does reach them; see [below](#where-the-high-ground-sits-decides-how-long-a-game-lasts).
 
 This is not a bug, it follows from the rules as specified. A team is exactly 10 points and 7 wins, so losing
 two or three machines loses the game — and machines die fast, because an Attack-4 machine on flat ground deals
@@ -278,6 +280,50 @@ set starts is worth something even to an agent that looks one activation ahead, 
 the ground — and that is an average over random arrangements, so the best ones are presumably worth more. This
 was a first look, not a registered experiment, but it is the case for searching for better starting positions,
 board by board.
+
+### Where the high ground sits decides how long a game lasts
+
+Adding three boards made a pattern visible that one board could never show. The same `heuristic` on both sides,
+standard team, corruption on, 30 games each — point estimates from a single sample, not intervals, which is
+enough when the spread is fourfold:
+
+| Board | High ground | Average rounds | Branching |
+|---|---|---|---|
+| Coastal | none | 4.3 | 215 |
+| Mountains | a ridge **between** the players | 4.5 | 249 |
+| Plains and Forests | none above forest | 5.7 | 261 |
+| Caldera | a rim between them, ringing a chasm | 5.7 | 227 |
+| Flat | none | 6.1 | 214 |
+| River Valley | a bluff **behind** each player's own river bank | 6.9 | 257 |
+| Chasms | none | 9.9 | 162 |
+| Split Peaks | a peak in **each player's own** half | 14.5 | 235 |
+| Badlands | a spur in **each player's own** half | 16.7 | 189 |
+
+**Peaks in the middle make games short; peaks at home make them long.** Mountains — the board most made of high
+ground — is the *fastest* board here, because the ground worth having is the ground between the two sides, so
+both walk into the same fight. Split Peaks and Badlands give each player a peak of their own, and both agents
+climb their own and stay there: three times the game length, and the blight ends up deciding a share of it.
+
+Checked directly on Badlands, by regenerating it with one feature removed at a time:
+
+| Badlands variant | Average rounds |
+|---|---|
+| as published | 16.7 |
+| chasms → grassland | 17.1 |
+| marsh → grassland | 9.9 |
+| **the two mountains → grassland** | **7.3** |
+
+The rift is not what slows the board down; two mountains are. Removing six chasm tiles changes nothing, removing
+two mountain tiles more than halves the game. This is the behaviour the
+[H4 candidate](heuristics.md#candidates-this-surfaced) was raised to explain from the other end — `threat=0`
+gaining 19 points on Mountains — and it is the same fight between weights seen as a stand-off instead of a score: high ground pays `terrain` ×
+the tile's modifier, standing in reach costs a flat −5, and an agent holding its own peak is paid to stay
+there. A board where each side owns a peak turns that into a siege.
+
+Two consequences. Board choice is a bigger lever on a measurement than it looks — a sweep over `all` is
+averaging 4-round games with 17-round ones, and the long boards cost ~5× the compute per game. And any
+experiment about terrain weights should name its boards in advance, because "is the high ground in the middle
+or at home" changes the answer.
 
 ### Facing is real, and small: being hit on a weak side costs about four points
 

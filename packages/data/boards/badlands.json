@@ -1,0 +1,23 @@
+{
+  "id": "badlands",
+  "name": "Badlands",
+  "description": "Broken country: a rift on one flank, a rock spur on the other, and the same view from either seat. Nothing is mirrored left to right, so the two flanks ask different questions \u2014 go round the holes, or climb.",
+  "legend": {
+    "C": "chasm",
+    "W": "marsh",
+    "G": "grassland",
+    "F": "forest",
+    "H": "hill",
+    "M": "mountain"
+  },
+  "rows": [
+    "GGGGGFGG",
+    "GGGFGGWG",
+    "CCGGGHMG",
+    "FCGGWHHG",
+    "GHHWGGCF",
+    "GMHGGGCC",
+    "GWGGFGGG",
+    "GGFGGGGG"
+  ]
+}

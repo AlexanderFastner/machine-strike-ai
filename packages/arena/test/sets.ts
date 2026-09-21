@@ -83,7 +83,7 @@ throws("an unknown machine is refused", () => resolveTeam("burrower+dragon"), "n
 eq("Flat is out of the rotation", resolveBoards("all").includes("flat"), false);
 eq("but is still a board, and still runs when named", [!!BOARDS.flat, resolveBoards("flat")], [true, ["flat"]]);
 eq("every other board is in it", resolveBoards("all").length, Object.keys(BOARDS).length - NOT_IN_ROTATION.size);
-eq("and deployment still has to work on all of them", Object.keys(BOARDS).length, 6);
+eq("and deployment still has to work on all of them", Object.keys(BOARDS).length, 9);
 
 // --- deployment: every set, every board ------------------------------------------
 {
