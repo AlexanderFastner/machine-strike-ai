@@ -868,9 +868,94 @@ runner — a consistency check on the two experiment harnesses rather than new e
 
 ### Candidates this surfaced
 
-- **H4 — the threat term on high ground.** Confirm finding 2 on fresh seeds, then test whether it is the −5 flat
-  penalty fighting the terrain bonus, by scaling `threatened` alone rather than the pair.
+- **[H4 — the threat term on high ground](#h4--the-threat-term-on-high-ground).** Confirm finding 2 on fresh
+  seeds, then test whether it is the −5 flat penalty fighting the terrain bonus, by scaling `threatened` alone
+  rather than the pair. **Registered below.**
 - **Confirm the two underweights.** `health=2` and `advance=2` on fresh seeds, as their own entry, since H3
   refused to select them.
 - **Delete `inBlight`,** or keep it only for games that reach the blight. It costs half a point and the
   evaluation is shorter without it.
+
+---
+
+## H4 — The threat term on high ground
+
+**Question.** [H3](#h3--what-each-term-is-worth) found that switching the `threat` term off scores **69.0%**
+(60.7 – 77.3) on Mountains: a term that costs its own agent nineteen points, the largest effect any entry here
+has produced and the only one pointing backwards. Is it real, which half of the term does it, and does the harm
+track how much high ground the board has?
+
+**Why now.** Three new boards made the same effect visible as *behaviour* rather than as a score. On boards
+where each player owns a peak, both agents climb their own and stay there, and games run three times as long;
+regenerating Badlands without its two mountains halves the game length, while removing six chasm tiles changes
+nothing ([arena.md](arena.md#where-the-high-ground-sits-decides-how-long-a-game-lasts)). So there is now a
+family of boards to test a mechanism against instead of a single board's anecdote.
+
+### The change — one knob per half of the term
+
+`threat` scales `threatened` (−5, one of mine sits in an enemy's reach) and `threatening` (+3, one of theirs
+sits in mine) together, so H3 could only price the pair. H4 gives each half a scale of its own. `threat` keeps
+scaling both, so every number H3 reported keeps its meaning, and a scale of 1 multiplies exactly — the default
+agent is unchanged, which is checked rather than assumed (instrument 2 below).
+
+```
+heuristic:threatened=0     the penalty removed, the bonus kept
+heuristic:threatening=0    the bonus removed, the penalty kept
+heuristic:threat=0         both, as H3 measured it
+```
+
+### Hypothesis
+
+**The −5 is fighting the terrain bonus.** High ground pays `terrain` × the tile's modifier — **+12** on a
+mountain — and it is also the ground every enemy wants to reach, so the squares that win the game are exactly
+the squares the threat term is paid to avoid. A flat penalty cannot represent that trade: it charges the same
+−5 for standing in reach on a mountain as on grassland, where the same exposure is worth far less.
+
+If that is the mechanism:
+
+1. **The effect is real.** `threat=0` beats 50% on Mountains, on seeds it has never played.
+2. **It is `threatened`, not `threatening`.** Removing the penalty alone recovers most of the gain; removing
+   the bonus alone does little.
+3. **It tracks the ground.** The gain is largest where the high ground is highest, and vanishes on boards with
+   none, where there is no terrain bonus for the penalty to fight.
+
+Ordering registered before the run, by the board's hill-and-mountain count: **Mountains** (22 tiles) clearly
+largest; **Split Peaks**, **Badlands**, **Caldera** (8) and **River Valley** (6) intermediate; **Flat**,
+**Chasms**, **Coastal** and **Plains and Forests** (0) at about 50%.
+
+4. **Games get shorter where the gain is largest** — the stand-off is the same effect seen from the side.
+
+### Method
+
+- **Confirmation** — `heuristic:threat=0` vs `heuristic`, Mountains, 100 pairs (200 games), seeds **1001–1100**.
+  H3 measured this on seeds 1–50; these are seeds neither agent has played.
+- **Which half** — `threatened=0` and `threatening=0`, same board, same seeds, 100 pairs each.
+- **Dose–response** — `threat=0` vs `heuristic` on **all nine boards**, 50 pairs each, seeds **2001–2050**.
+  Flat is the control: no terrain, so nothing for the term to fight.
+- **The weight, not the switch** — `threatened` at **0, 0.5, 2** on Mountains, 100 pairs, seeds 1–100, and the
+  best of them confirmed on seeds 1001–1100. H2's lesson stands: the best of a noisy grid is a selection, not a
+  result, and only the confirmation counts as evidence.
+- **Fixed:** standard team, corruption on, the default deployment rule, arena defaults otherwise.
+
+Intervals are ±1.96·sd/√n over pair scores, the experiment formula in
+[arena.md](arena.md#reading-the-error-bars).
+
+### Metrics
+
+| Metric | What it measures | Reported as | Falsified if |
+|---|---|---|---|
+| **Confirmation on Mountains** | whether H3's nineteen points was real | score vs `heuristic`, with its interval | **the interval covers 50% — the effect was noise, and the rest of this entry is exploratory** |
+| **Which half carries it** | whether the penalty or the bonus does the harm | two scores, with intervals | **`threatening=0` gains as much as `threatened=0`** — then it is not the −5 |
+| **Dose–response** | whether the harm tracks the terrain | gain per board, against that board's hill + mountain count | **`threat=0` gains as much on Flat as on Mountains** — then the term is simply bad, not fighting terrain |
+| **Rounds per board** | the stand-off, measured directly | average rounds with and without the term | — |
+| **A scale is selected** | — | only from the confirmation, never from the search | — |
+| Instrument 1 — **Flat control** | that there is terrain in the mechanism at all | *expected ≈ 50%* | see dose–response |
+| Instrument 2 — **identity** | that splitting the term changed no behaviour | `threatened=1,threatening=1` plays **every** game identically to plain `heuristic`, by checksum | **any game differs** — then the refactor is not behaviour-preserving and nothing here compares to H3 |
+
+### Status
+
+- [ ] Designed, with the hypotheses and the instrument checks written before any code or results
+- [ ] A scale per half of the threat term
+- [ ] Runner
+- [ ] Run it
+- [ ] Record results and findings
