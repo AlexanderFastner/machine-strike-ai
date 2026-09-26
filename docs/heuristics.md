@@ -1047,12 +1047,83 @@ H2 taught this project to expect, still clear of 50%.
 
 ### Candidates this surfaced
 
-- **H4b — Flat against Mountains, properly powered.** The one question H4 failed to answer. `threat=0` on both
-  boards, **200 pairs each** on fresh seeds (3001 onwards), which is ±3.5 points and enough to separate +6 from
-  +12 if they differ. Nothing else changes.
+- **[H4b — Flat against Mountains, properly powered](#h4b--flat-against-mountains-properly-powered).** The one
+  question H4 failed to answer. `threat=0` on both boards on fresh seeds, at the sample size the comparison
+  actually needs. **Registered below.**
 - **Delete the threat term, or cut it hard.** It is negative or neutral on eight of nine boards and worth −14
   on one. Before that, price it on the ladder rather than against `heuristic` alone: an agent tuned by removing
   a term is being measured against the very opponent whose blind spot it exploits.
 - **Why does an agent that ignores threats beat one that sees them?** Finding 1 is now solid and unexplained.
   The obvious suspect is that one-activation threat awareness is self-defeating — you cannot dodge what you
   cannot see coming, and flinching from what you *can* see costs tempo in a game decided in four rounds.
+
+---
+
+## H4b — Flat against Mountains, properly powered
+
+**Question.** [H4](#h4--the-threat-term-on-high-ground) asked whether the threat term's harm tracks the terrain
+and could not answer: `threat=0` gained **+12.0** (53.3 – 70.7) on Mountains and **+6.0** (49.4 – 62.6) on Flat,
+two intervals that overlap across most of their length. Does the harm depend on the ground, or is the term
+simply bad everywhere?
+
+**Why now.** This is the only claim in H4 that failed for want of games rather than for want of truth. It is
+also the claim everything else rests on: if the term is bad on a board with no terrain at all, then "a flat −5
+cannot price exposure on ground worth +12" is not the story, and the next question is about one-activation
+threat awareness in general rather than about high ground.
+
+**Nothing changes but the sample size.** Same agents, same team, same corruption setting, same default
+deployment. Only the boards (two), the seeds (fresh) and the number of games are different.
+
+### The arithmetic that sets the sample size, written before the run
+
+H4 measured `threat=0` at 100 pairs on Mountains for a half-width of ±6.7 points. Half-widths shrink as 1/√n,
+and the difference between two independent boards has its own standard error:
+
+```
+se_board  = sd/√n            over that board's pair scores
+se_diff   = √(se_M² + se_F²)
+interval  = (gain_M − gain_F) ± 1.96·se_diff
+```
+
+At 100 pairs a board that gives `se_diff ≈ 4.8` points, so a 6-point difference was never separable — H4 was
+asking a question its sample could not answer. At **500 pairs a board**, `se_board ≈ 1.5` and
+`se_diff ≈ 2.1`, so a 6-point difference lands about 2.8 standard errors out. That is the smallest honest
+version of this experiment, and it costs about five minutes.
+
+### Method
+
+- `heuristic:threat=0` vs plain `heuristic`, **500 pairs (1,000 games) each**, on **Mountains** and on **Flat**.
+- Seeds **3001–3500** on both boards — seeds no entry has used.
+- Standard team, corruption on, default deployment, arena defaults otherwise.
+- Flat is in the rotation for this entry only. It is normally left out because a board with no terrain has
+  nothing tactical to measure, which is exactly the property that makes it the control here.
+
+### Hypothesis
+
+**Registered prediction: the difference will not be significant.** H4's dose–response showed no pattern outside
+Mountains — the two private-peak boards came out *negative* and Coastal, with no high ground, tied with Flat at
++6.0. If terrain drove the harm, those boards should have ranked between the two extremes and they did not. So
+this entry is registered expecting to **fail to find** a terrain effect, and Mountains' larger number to be
+partly the ordinary luck of being the board that got looked at first.
+
+That prediction is the one at risk. If the difference *is* significant, the H4 mechanism survives after all and
+the story returns to high ground.
+
+### Metrics
+
+| Metric | Reported as | Decision |
+|---|---|---|
+| **Gain on each board** | score vs `heuristic`, with its interval | each is worth stating on its own: at 500 pairs, ±3 points |
+| **The difference** | `gain_M − gain_F`, with the interval above | **terrain matters** if it excludes 0 |
+| **Terrain does not matter** | the same interval | **claimed only if it excludes +6**, H4's point estimate, while containing 0 — an interval that is merely wide proves nothing |
+| **Is the term harmful on Flat at all?** | Flat's own interval against 50% | a separate question from the comparison, and now answerable |
+| Rounds, first attack | *reported* | — |
+
+Neither outcome selects a weight. This entry answers one question about one term and nothing else.
+
+### Status
+
+- [ ] Designed, with the sample size derived and the prediction written before any code or results
+- [ ] Runner
+- [ ] Run it
+- [ ] Record results and findings
