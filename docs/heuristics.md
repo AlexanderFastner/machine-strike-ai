@@ -1123,7 +1123,7 @@ Neither outcome selects a weight. This entry answers one question about one term
 
 ### Status
 
-- [ ] Designed, with the sample size derived and the prediction written before any code or results
-- [ ] Runner
+- [x] Designed, with the sample size derived and the prediction written before any code or results
+- [x] Runner
 - [ ] Run it
 - [ ] Record results and findings

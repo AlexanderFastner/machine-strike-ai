@@ -1,0 +1,130 @@
+/**
+ * H4b — Flat against Mountains, at the sample size the comparison needs, as
+ * docs/heuristics.md §H4b registers it.
+ *
+ *   node --import tsx experiments/h4b-flat-vs-mountains/run.ts
+ *   PAIRS_SCALE=0.02 node --import tsx experiments/h4b-flat-vs-mountains/run.ts   # smoke test
+ *
+ * Two measurements and one subtraction. H4 asked whether the threat term's harm
+ * tracks the terrain, measured +12 on Mountains and +6 on Flat, and could not
+ * separate them; the difference, not either board, is the result here.
+ */
+import { execSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { agentByName } from "@ms/ai";
+import { TEAMS, gameMetrics, mirror, rebuild, recordGame, type MatchSetup } from "@ms/arena";
+import { BOARDS } from "@ms/arena/node";
+
+const scale = Number(process.env.PAIRS_SCALE ?? 1);
+const PAIRS = Math.max(2, Math.round(500 * scale));
+const SEED0 = 3001;
+
+type Outcome = {
+  board: string;
+  pairs: number; seed0: number;
+  /** Kept whole: the standard error of the difference needs each board's spread, not just its mean. */
+  pairScores: number[];
+  wins: number; losses: number; draws: number;
+  score: number; se: number; low: number; high: number;
+  rounds: number; firstAttack: number; problems: number;
+  seconds: number;
+};
+
+function measure(board: string, a: string, b: string, nPairs: number, seed0: number): Outcome {
+  const setup: MatchSetup = { board: BOARDS[board], teams: mirror(TEAMS.standard), corruption: true };
+  const A = agentByName(a), B = agentByName(b);
+  let wins = 0, losses = 0, draws = 0, rounds = 0, firstAttack = 0, problems = 0;
+  const pairScores: number[] = [];
+  const t0 = performance.now();
+
+  for (let seed = seed0; seed < seed0 + nPairs; seed++) {
+    let pairScore = 0;
+    for (const aFirst of [true, false]) {
+      const replay = aFirst ? recordGame(A, B, setup, seed) : recordGame(B, A, setup, seed);
+      const m = gameMetrics(replay, rebuild(replay));
+      problems += m.problems.length;
+      rounds += m.rounds;
+      firstAttack += m.firstAttackRound ?? m.rounds;
+
+      const w = replay.result.winner;
+      const s = w === "draw" ? 0.5 : w === (aFirst ? 1 : 2) ? 1 : 0;
+      if (s === 1) wins++; else if (s === 0) losses++; else draws++;
+      pairScore += s / 2;
+    }
+    pairScores.push(pairScore);
+  }
+
+  // Pairs, not games, are the independent unit: the two games of a pair share a seed.
+  const n = pairScores.length;
+  const mean = pairScores.reduce((x, y) => x + y, 0) / n;
+  const sd = Math.sqrt(pairScores.reduce((x, y) => x + (y - mean) ** 2, 0) / Math.max(n - 1, 1));
+  const se = sd / Math.sqrt(n);
+
+  return {
+    board, pairs: n, seed0, pairScores,
+    wins, losses, draws,
+    score: mean, se, low: Math.max(0, mean - 1.96 * se), high: Math.min(1, mean + 1.96 * se),
+    rounds: rounds / (n * 2), firstAttack: firstAttack / (n * 2), problems, seconds: (performance.now() - t0) / 1000,
+  };
+}
+
+const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
+const gain = (r: Outcome) => (r.score - 0.5) * 100;
+const signed = (x: number) => `${x >= 0 ? "+" : ""}${x.toFixed(1)}`;
+
+console.log(`threat=0 vs heuristic, ${PAIRS} pairs a board, seeds ${SEED0} on\n`);
+const results = ["mountains", "flat"].map((board) => {
+  const r = measure(board, "heuristic:threat=0", "heuristic", PAIRS, SEED0);
+  console.log(
+    `${board.padEnd(10)} ${pct(r.score)} [${pct(r.low)}, ${pct(r.high)}] over ${r.pairs * 2} games — ` +
+      `gains ${signed(gain(r))} points (${r.rounds.toFixed(1)} rounds, ${r.seconds.toFixed(0)}s, ${r.problems} replay problems)`,
+  );
+  return r;
+});
+const [mountains, flat] = results;
+
+// The difference of two independent means, in points of score.
+const diff = gain(mountains) - gain(flat);
+const seDiff = Math.sqrt(mountains.se ** 2 + flat.se ** 2) * 100;
+const [dLow, dHigh] = [diff - 1.96 * seDiff, diff + 1.96 * seDiff];
+
+// The two decisions this entry registered, in the order it registered them.
+const terrainMatters = dLow > 0 || dHigh < 0;
+const terrainDoesNot = !terrainMatters && dLow > -6 && dHigh < 6;
+const verdict = terrainMatters
+  ? "**Terrain matters.** The difference excludes 0."
+  : terrainDoesNot
+    ? "**Terrain does not matter.** The difference contains 0 and excludes ±6, H4's point estimate — the two boards are the same within a margin smaller than the effect H4 thought it saw."
+    : "**Still undecided.** The difference contains both 0 and ±6: this sample is wider than the registered decision rule allows, and the question stands.";
+
+console.log(`\ndifference: ${signed(diff)} points [${signed(dLow)}, ${signed(dHigh)}] — ${verdict.replace(/\*\*/g, "")}`);
+
+// ---------------------------------------------------------------- write up
+const sha = execSync("git rev-parse --short HEAD").toString().trim();
+const dirty = execSync("git status --porcelain").toString().trim() ? " (with uncommitted changes)" : "";
+const lines: string[] = [];
+lines.push(`# H4b results`, ``);
+lines.push(`Generated by \`experiments/h4b-flat-vs-mountains/run.ts\` at commit \`${sha}\`${dirty}, ${new Date().toISOString().slice(0, 10)}.`);
+lines.push(`\`heuristic:threat=0\` against plain \`heuristic\`, standard team, corruption on, paired games.${scale !== 1 ? ` **Scaled run: PAIRS_SCALE=${scale}.**` : ""}`, ``);
+
+lines.push(`## Each board`, ``);
+lines.push(`| Board | Games | Seeds | Score | 95% interval | Gain | W / L / D | Rounds | First attack |`);
+lines.push(`|---|---|---|---|---|---|---|---|---|`);
+for (const r of results)
+  lines.push(`| ${r.board} | ${r.pairs * 2} | ${r.seed0}–${r.seed0 + r.pairs - 1} | ${pct(r.score)} | ${pct(r.low)} – ${pct(r.high)} | ${signed(gain(r))} | ${r.wins} / ${r.losses} / ${r.draws} | ${r.rounds.toFixed(1)} | ${r.firstAttack.toFixed(1)} |`);
+lines.push(``, `Each interval is ±1.96·sd/√n over that board's pair scores (docs/arena.md, "Reading the error bars").`, ``);
+
+lines.push(`## The difference, which is the result`, ``);
+lines.push(`\`\`\``);
+lines.push(`gain on Mountains  ${signed(gain(mountains))}  (se ${(mountains.se * 100).toFixed(2)})`);
+lines.push(`gain on Flat       ${signed(gain(flat))}  (se ${(flat.se * 100).toFixed(2)})`);
+lines.push(`difference         ${signed(diff)}  ± 1.96 × √(se_M² + se_F²) = ± ${(1.96 * seDiff).toFixed(1)}`);
+lines.push(`95% interval       [${signed(dLow)}, ${signed(dHigh)}]`);
+lines.push(`\`\`\``, ``);
+lines.push(verdict, ``);
+lines.push(`For reference, H4 measured these at 50 pairs a board: Mountains +12.0, Flat +6.0, a difference of`);
+lines.push(`+6.0 with a standard error of about 4.8 points — which is why this entry exists.`, ``);
+lines.push(`Replay problems across every game: **${results.reduce((n, r) => n + r.problems, 0)}**.`);
+writeFileSync(resolve(import.meta.dirname, "results.md"), lines.join("\n") + "\n");
+console.log(`\nwrote experiments/h4b-flat-vs-mountains/results.md`);
