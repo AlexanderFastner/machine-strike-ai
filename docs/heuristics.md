@@ -1005,8 +1005,9 @@ larger; both orderings put Mountains first and Flat last.)
 | **0, confirmed on fresh seeds** | **57.5%** | 51.1 – 63.9 |
 
 Hypotheses as registered: **1 ✓** (the effect is real), **2 ✗** (the penalty is the harmful half, but it
-accounts for half the gain, not most, and the bonus is not harmless), **3 ✗** (it does not track the ground),
-**4 ✗** (removing the term does not shorten the long boards).
+accounts for half the gain, not most, and the bonus is not harmless), **3 ✗ at the time, ✓ once measured
+properly** ([H4b](#h4b--flat-against-mountains-properly-powered) — it does track the ground, and this entry was
+too small to see it), **4 ✗** (removing the term does not shorten the long boards).
 
 ### Findings
 
@@ -1021,12 +1022,14 @@ penalty gone and the bonus kept, the agent is paid +3 for every enemy in its rea
 being in theirs, which is a worse evaluation than having neither. **The term is harmful as a unit.** The
 registered claim that `threatened=0` would recover most of the gain is wrong.
 
-**3. The mechanism registered for it is not supported — Flat gains too.** The control board, which has no
-terrain at all for a flat penalty to fight, gains **+6.0** (49.4 – 62.6). Mountains gains +12.0 (53.3 – 70.7)
-and the two intervals overlap, so by this project's own rule the ordering cannot be claimed. Worse for the
-hypothesis, the predicted middle of the range is absent: Split Peaks (−2.5) and Badlands (−3.0), the two boards
-built around private peaks, came out *negative*, while Coastal (+6.0) with no high ground tied with Flat.
-Whatever the threat term is doing wrong, "it fights the terrain bonus" does not describe it.
+**3. ~~The mechanism registered for it is not supported — Flat gains too.~~ Withdrawn: see
+[H4b](#h4b--flat-against-mountains-properly-powered).** As measured here, the control board gained **+6.0**
+(49.4 – 62.6) against Mountains' +12.0 (53.3 – 70.7), two intervals overlapping across most of their length,
+and the predicted middle of the range was absent — Split Peaks (−2.5) and Badlands (−3.0) came out *negative*
+while Coastal (+6.0) tied with Flat. That read as evidence against the mechanism. It was not evidence of
+anything: at 50 pairs a board these are ±7 to ±9 points. Re-measured at 500 pairs, **Flat gains +0.0**
+(47.6 – 52.4) and Mountains **+13.5**, a difference of +13.5 (+9.7 – +17.3). The mechanism stands and this
+finding was a sampling artefact — the one finding in this entry that its own finding 4 predicted.
 
 **4. This entry was underpowered exactly where it mattered.** 50 pairs per board is ±7 to ±9 points, against a
 difference of about 6 points to be separated. The registered falsification — *does Flat gain as much as
@@ -1049,7 +1052,7 @@ H2 taught this project to expect, still clear of 50%.
 
 - **[H4b — Flat against Mountains, properly powered](#h4b--flat-against-mountains-properly-powered).** The one
   question H4 failed to answer. `threat=0` on both boards on fresh seeds, at the sample size the comparison
-  actually needs. **Registered below.**
+  actually needs. **Run: the harm does track the terrain, +13.5 against +0.0.**
 - **Delete the threat term, or cut it hard.** It is negative or neutral on eight of nine boards and worth −14
   on one. Before that, price it on the ladder rather than against `heuristic` alone: an agent tuned by removing
   a term is being measured against the very opponent whose blind spot it exploits.
@@ -1125,5 +1128,59 @@ Neither outcome selects a weight. This entry answers one question about one term
 
 - [x] Designed, with the sample size derived and the prediction written before any code or results
 - [x] Runner
-- [ ] Run it
-- [ ] Record results and findings
+- [x] Run it — 2,000 games, 0 replay problems
+- [x] Record results and findings
+
+### Results
+
+Measured at commit `576c3a1`; full tables in
+[`experiments/h4b-flat-vs-mountains/results.md`](../experiments/h4b-flat-vs-mountains/results.md).
+
+| Board | Games | Seeds | Score | 95% interval | Gain | W / L / D | Rounds |
+|---|---|---|---|---|---|---|---|
+| Mountains | 1,000 | 3001–3500 | **63.5%** | 60.6 – 66.4 | **+13.5** | 635 / 365 / 0 | 4.2 |
+| Flat | 1,000 | 3001–3500 | **50.0%** | 47.6 – 52.4 | **+0.0** | 500 / 500 / 0 | 7.0 |
+
+```
+gain on Mountains  +13.5  (se 1.47)
+gain on Flat        +0.0  (se 1.24)
+difference         +13.5  ± 1.96 × √(se_M² + se_F²) = ± 3.8
+95% interval       [+9.7, +17.3]
+```
+
+**Terrain matters.** The difference excludes 0 by seven standard errors, so the registered decision is the first
+of the three: the threat term's harm depends on the ground. **The prediction on record — that the difference
+would not be significant — is wrong.**
+
+### Findings
+
+**1. The H4 mechanism survives its first real test.** `threat=0` gains **+13.5** (60.6 – 66.4) on Mountains and
+**nothing at all** on Flat — 50.0% over a thousand games, 500 wins and 500 losses. A board with no terrain gives
+the threat term nothing to fight, and on it the term is exactly neutral; a board made of high ground costs its
+owner fourteen points. That is what H4 predicted and could not show.
+
+**2. H4's Flat number was noise, and the size of the mistake is worth recording.** 50 pairs said +6.0
+(49.4 – 62.6); 500 pairs say +0.0 (47.6 – 52.4). The point estimate moved six points — inside H4's own interval,
+exactly as advertised, which is the argument for reading interval width rather than point estimates.
+
+**3. Every other board in H4's dose–response should be read as unmeasured.** They were all 50 pairs. If Flat's
++6.0 was noise, so are Coastal's +6.0, Badlands' −3.0, Split Peaks' −2.5 and the rest: at ±7 to ±9 points, none
+of them was ever evidence for or against a pattern. H4's finding 3 rested on that table and is **withdrawn** —
+corrected in place above. Only Mountains and Flat have numbers worth the name.
+
+**4. The Mountains effect has now been measured four times** — 69.0%, 64.5%, 62.0% and 63.5%, the last over a
+thousand games on seeds nothing else has touched. It is not going away.
+
+**5. What this still does not show is that *height* is the variable.** Mountains and Flat differ in more than
+elevation: games last 4.2 rounds there against 7.0 here, and a shorter game is a different game. The clean next
+test isolates one thing — the same board with its mountains stepped down to hills, or `terrain=0` paired with
+`threat=0` to see whether switching off the bonus removes the penalty's harm. Until then the claim is *terrain*,
+not *altitude*.
+
+### Candidates this surfaced
+
+- **Is it height, or is it the terrain term?** `heuristic:terrain=0:threat=0` against `heuristic:terrain=0` on
+  Mountains. If the threat term stops being harmful once nothing is paying for high ground, the fight between
+  the two weights is demonstrated rather than inferred. One measurement, and the cheapest one left.
+- **Re-run the dose–response at a size that means something.** Nine boards at 500 pairs is about 40 minutes.
+  Worth doing once, because the per-board gain is now known to be a real quantity rather than a rumour.

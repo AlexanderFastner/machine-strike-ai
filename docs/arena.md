@@ -323,6 +323,12 @@ it is wrong: switching the threat term off entirely leaves Badlands at 14.8 roun
 Split Peaks at 16.8 against 17.3. What keeps an agent on its peak is what **pays** it to sit there, not what
 charges it to leave. The stand-off is the `terrain` term on its own.
 
+The two weights do fight, though — just over the score rather than over the clock.
+[H4b](heuristics.md#h4b--flat-against-mountains-properly-powered) put `threat=0` on Mountains and on Flat over a
+thousand games each: **+13.5** points on the board made of high ground, **+0.0** on the board with no terrain at
+all. Where there is height to be paid for, the threat term costs its owner fourteen points; where there is none,
+it costs nothing.
+
 Two consequences. Board choice is a bigger lever on a measurement than it looks — a sweep over `all` is
 averaging 4-round games with 17-round ones, and the long boards cost ~5× the compute per game. And any
 experiment about terrain weights should name its boards in advance, because "is the high ground in the middle
